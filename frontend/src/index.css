@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { background: #FFFFFF; color: #111827; margin: 0; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #F3F4F6; }
+  ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+}
+
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-gray-100 shadow-sm;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 hover:shadow-md hover:border-blue-100 hover:-translate-y-0.5;
+  }
+  .btn-primary {
+    @apply bg-blue-600 text-white font-medium rounded-lg px-4 py-2 hover:bg-blue-700 active:bg-blue-800 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center;
+  }
+  .btn-secondary {
+    @apply bg-white text-gray-700 font-medium rounded-lg px-4 py-2 border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-150 disabled:opacity-50 flex items-center gap-2 justify-center;
+  }
+  .btn-ghost {
+    @apply text-gray-600 font-medium rounded-lg px-4 py-2 hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150 flex items-center gap-2 justify-center;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white font-medium rounded-lg px-4 py-2 hover:bg-red-700 transition-colors duration-150 flex items-center gap-2 justify-center;
+  }
+  .input {
+    @apply w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150 text-sm;
+  }
+  .input-error {
+    @apply border-red-300 focus:ring-red-500;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .stat-card {
+    @apply card p-5;
+  }
+  .page-enter {
+    animation: fadeIn 0.25s ease-out;
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150 cursor-pointer;
+  }
+  .sidebar-link.active {
+    @apply bg-blue-50 text-blue-700;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.7; }
+}
+.pulse-green {
+  animation: pulse-ring 1.5s ease-in-out infinite;
+}

@@ -297,11 +297,11 @@ docker compose up --build
 **3. Open in browser**
 | Service | URL |
 |---|---|
-| 🌐 Frontend | http://localhost:3000 |
-| ⚙️ API | http://localhost:8080/api/v1 |
-| 🐇 RabbitMQ Dashboard | http://localhost:15672 (guest/guest) |
-| 🗄️ PostgreSQL | localhost:5432 |
-| 🔴 Redis | localhost:6379 |
+| 🌐 Frontend |  |
+| ⚙️ API | |
+| 🐇 RabbitMQ Dashboard |  |
+| 🗄️ PostgreSQL |  |
+| 🔴 Redis |  |
 
 **Run in background (detached mode)**
 ```bash
@@ -350,7 +350,7 @@ cp .env.example .env      # Edit .env if needed
 go mod download
 go run ./cmd/server/main.go
 ```
-> API available at: http://localhost:8080
+
 
 **Step 3 — Run the frontend**
 ```bash
@@ -358,37 +358,6 @@ cd frontend
 npm install
 npm run dev
 ```
-> Frontend available at: http://localhost:3000
-
----
-
-## 🔧 Environment Variables
-
-Copy `.env.example` to `.env` in the `backend/` directory:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-| Variable | Default | Description |
-|---|---|---|
-| `APP_ENV` | `development` | Environment (`development` / `production`) |
-| `APP_PORT` | `8080` | API server port |
-| `JWT_SECRET` | — | **Change this!** Secret key for JWT signing |
-| `JWT_ACCESS_EXPIRES` | `15m` | Access token lifetime |
-| `JWT_REFRESH_EXPIRES` | `168h` | Refresh token lifetime (7 days) |
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_USER` | `queuesmart` | Database user |
-| `DB_PASSWORD` | `queuesmart123` | Database password |
-| `DB_NAME` | `queuesmart` | Database name |
-| `DB_SSLMODE` | `disable` | SSL mode (`disable` for local) |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
-| `RABBITMQ_URL` | `amqp://guest:guest@localhost:5672/` | RabbitMQ URL |
-| `BASE_URL` | `http://localhost:8080` | Backend public URL |
-| `FRONTEND_URL` | `http://localhost:3000` | Frontend URL (used for CORS) |
-
-> ⚠️ **Never commit your real `.env` file.** It's already in `.gitignore`.
 
 ---
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PlayCircle, PauseCircle, XCircle, ChevronRight, Users, Clock } from 'lucide-react'
+import { PlayCircle, PauseCircle, XCircle, ChevronRight, Users, Clock, Building2 } from 'lucide-react'
 import { staffAPI } from '../../services/api'
 import { wsService } from '../../services/websocket'
 import { Layout } from '../../components/layout/Layout'
@@ -52,7 +52,8 @@ export default function StaffDashboard() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Live floor</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[#18201D]">Staff dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">{queues.length} queues · {waiting} total waiting</p>
           </div>
         </div>
@@ -61,13 +62,13 @@ export default function StaffDashboard() {
           <div className="grid md:grid-cols-2 gap-4">{[1,2,3,4].map(i => <CardSkeleton key={i} />)}</div>
         ) : queues.length === 0 ? (
           <div className="card p-10 text-center">
-            <div className="text-4xl mb-3">🏢</div>
+            <Building2 size={32} className="mx-auto mb-3 text-black/30" />
             <p className="text-gray-500">No queues assigned to your venue</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
             {queues.map((queue: Queue) => (
-              <div key={queue.id} className="card p-5 space-y-4">
+              <div key={queue.id} className="card p-5 space-y-4 border-t-4 border-t-[#F5C84C]">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-gray-900">{queue.name}</h3>

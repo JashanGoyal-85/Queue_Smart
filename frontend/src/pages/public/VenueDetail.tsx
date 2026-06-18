@@ -8,6 +8,7 @@ import { PageSpinner } from '../../components/ui/Spinner'
 import { formatWaitTime } from '../../utils/formatters'
 import { VENUE_CATEGORIES } from '../../utils/constants'
 import type { Queue } from '../../types'
+import { PublicNav } from '../../components/layout/PublicNav'
 
 export default function VenueDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -24,9 +25,11 @@ export default function VenueDetail() {
   const activeQueues: Queue[] = (venue.queues || []).filter((q: Queue) => q.status !== 'closed')
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-[#F4F1E9]">
+      <PublicNav />
       {/* Cover */}
-      <div className="relative h-48 bg-gradient-to-r from-blue-600 to-blue-800 overflow-hidden">
+      <div className="relative h-52 bg-[#18201D] overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         {venue.cover_url && <img src={venue.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30" />
         <Link to="/venues" className="absolute top-4 left-4 flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium">
@@ -36,9 +39,9 @@ export default function VenueDetail() {
 
       <div className="max-w-4xl mx-auto px-6 -mt-8 pb-12">
         {/* Venue header */}
-        <div className="card p-6 mb-6">
+        <div className="card p-6 sm:p-8 mb-8">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 border-4 border-white shadow-md flex items-center justify-center text-3xl flex-shrink-0 -mt-10">
+            <div className="w-16 h-16 rounded-2xl bg-[#F5C84C] border-4 border-white shadow-md flex items-center justify-center text-3xl flex-shrink-0 -mt-10">
               {venue.logo_url ? <img src={venue.logo_url} alt="" className="w-full h-full object-cover rounded-xl" /> : catInfo?.icon || '🏢'}
             </div>
             <div className="flex-1 min-w-0">
@@ -57,7 +60,8 @@ export default function VenueDetail() {
         </div>
 
         {/* Queues */}
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Queues ({activeQueues.length})</h2>
+        <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Live service board</p>
+        <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-[#18201D] mb-4">Active queues ({activeQueues.length})</h2>
         {activeQueues.length === 0 ? (
           <div className="card p-10 text-center text-gray-400">
             <div className="text-4xl mb-3">📭</div>
@@ -66,7 +70,7 @@ export default function VenueDetail() {
         ) : (
           <div className="space-y-4">
             {(venue.queues || []).map((queue: Queue) => (
-              <div key={queue.id} className="card p-5">
+              <div key={queue.id} className="card p-5 sm:p-6 border-l-4 border-l-[#F5C84C]">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
@@ -85,7 +89,7 @@ export default function VenueDetail() {
                   <div className="flex flex-col gap-2">
                     {queue.status === 'active' && (
                       <Link to={`/join/${queue.id}`}
-                        className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors text-center">
+                        className="px-5 py-2.5 bg-[#18201D] text-white text-sm font-bold rounded-xl hover:bg-[#2D3834] transition-colors text-center">
                         Join Queue
                       </Link>
                     )}

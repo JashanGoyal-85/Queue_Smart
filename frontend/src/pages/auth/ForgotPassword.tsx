@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import toast from 'react-hot-toast'
 import { useState } from 'react'
+import { Brand } from '../../components/layout/Brand'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -19,15 +20,11 @@ export default function ForgotPassword() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="auth-canvas min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">Q</span>
-            </div>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Reset password</h1>
+          <div className="mb-7"><Brand /></div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#18201D]">Reset password</h1>
           <p className="text-gray-500 text-sm mt-1">We'll send you a reset link</p>
         </div>
         <div className="card p-6">

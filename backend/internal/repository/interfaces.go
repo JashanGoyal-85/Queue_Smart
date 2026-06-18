@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"queuesmart/internal/models"
 	"github.com/google/uuid"
+	"queuesmart/internal/models"
 )
 
 type UserRepository interface {
@@ -33,6 +33,15 @@ type QueueRepository interface {
 	UpdateStatus(id uuid.UUID, status string) error
 	IncrementCount(id uuid.UUID) error
 	DecrementCount(id uuid.UUID) error
+}
+
+type CounterRepository interface {
+	Create(counter *models.Counter) error
+	GetByID(id uuid.UUID) (*models.Counter, error)
+	GetByQueueID(queueID uuid.UUID) ([]models.Counter, error)
+	Update(counter *models.Counter) error
+	Delete(id uuid.UUID) error
+	HasActiveToken(id uuid.UUID) (bool, error)
 }
 
 type TokenRepository interface {

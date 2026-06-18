@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import toast from 'react-hot-toast'
+import { Brand } from '../../components/layout/Brand'
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -39,20 +40,16 @@ export default function Login() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="auth-canvas min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">Q</span>
-            </div>
-            <span className="font-bold text-gray-900 text-lg">QueueSmart</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+          <div className="mb-7"><Brand /></div>
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#E85D32]">Member access</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#18201D]">Welcome back</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-7">
           <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="space-y-4">
             <Input label="Email" type="email" leftIcon={<Mail size={14} />}
               placeholder="you@example.com" error={errors.email?.message} {...register('email')} />

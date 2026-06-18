@@ -26,6 +26,7 @@ type Queue struct {
 	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`
 	Venue               *Venue         `json:"venue,omitempty" gorm:"foreignKey:VenueID"`
 	Tokens              []Token        `json:"tokens,omitempty" gorm:"foreignKey:QueueID"`
+	Counters            []Counter      `json:"counters,omitempty" gorm:"foreignKey:QueueID"`
 }
 
 func (q *Queue) BeforeCreate(tx *gorm.DB) error {
@@ -34,5 +35,3 @@ func (q *Queue) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-
-

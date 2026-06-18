@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Users, CheckCircle, XCircle, Loader2, Bell } from 'lucide-react'
+import { Clock, Users, CheckCircle, XCircle, Loader2, Bell, Monitor } from 'lucide-react'
 import { queueAPI } from '../../services/api'
 import { wsService } from '../../services/websocket'
 import { formatWaitTime, formatDateTime } from '../../utils/formatters'
@@ -72,7 +72,7 @@ export default function TrackToken() {
   // "Your turn" celebration screen
   if (isCalled && token.status === 'called') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="auth-canvas min-h-screen flex items-center justify-center p-6">
         <div className="text-center max-w-sm animate-fade-in">
           <div className="relative inline-block mb-6">
             <div className="w-28 h-28 bg-green-500 rounded-full flex items-center justify-center pulse-green mx-auto">
@@ -82,7 +82,13 @@ export default function TrackToken() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">It's your turn! 🎉</h1>
           <p className="text-gray-500 mb-4">Token <span className="font-bold text-gray-900">{token.display_code}</span> has been called</p>
-          <p className="text-sm text-gray-400">Please proceed to the counter now</p>
+          {token.counter ? (
+            <div className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-5 py-3 text-lg font-bold text-blue-700">
+              <Monitor size={20} /> Proceed to {token.counter.name}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Please proceed to the counter now</p>
+          )}
           {token.called_at && (
             <p className="text-xs text-gray-400 mt-2">Called at {formatDateTime(token.called_at)}</p>
           )}
@@ -92,7 +98,7 @@ export default function TrackToken() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="auth-canvas min-h-screen p-4">
       <div className="max-w-md mx-auto space-y-4 pt-8">
         <div className="text-center mb-6">
           <p className="text-sm text-gray-500 mb-1">{token.queue?.name}</p>

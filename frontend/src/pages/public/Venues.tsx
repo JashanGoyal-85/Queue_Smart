@@ -7,6 +7,7 @@ import { CardSkeleton } from '../../components/ui/Spinner'
 import { Badge } from '../../components/ui/Badge'
 import { VENUE_CATEGORIES } from '../../utils/constants'
 import type { Venue } from '../../types'
+import { PublicNav } from '../../components/layout/PublicNav'
 
 export default function Venues() {
   const [search, setSearch] = useState('')
@@ -23,39 +24,27 @@ export default function Venues() {
   const venues: Venue[] = data?.venues || []
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top Nav */}
-      <nav className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Q</span>
-            </div>
-            <span className="font-bold text-gray-900">QueueSmart</span>
-          </Link>
-          <div className="flex gap-3">
-            <Link to="/login" className="text-sm text-gray-600 hover:text-blue-600">Sign in</Link>
-            <Link to="/register" className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Register</Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#F4F1E9]">
+      <PublicNav />
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Find a venue</h1>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-12">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#E85D32]">Live directory</p>
+        <h1 className="mt-2 text-4xl sm:text-5xl font-extrabold tracking-[-0.045em] text-[#18201D] mb-3">Find your shortest wait.</h1>
+        <p className="mb-8 max-w-xl text-sm leading-6 text-black/50">Browse places nearby, compare active queues, and take a number before you arrive.</p>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-6">
+        <div className="card flex flex-wrap gap-3 mb-6 p-3">
           <div className="relative flex-1 min-w-48">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search venues..."
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="input w-full pl-9" />
           </div>
           <input value={city} onChange={e => { setCity(e.target.value); setPage(1) }}
             placeholder="City..."
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
+            className="input w-36" />
           <select value={category} onChange={e => { setCategory(e.target.value); setPage(1) }}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            className="input w-auto bg-white">
             <option value="">All categories</option>
             {VENUE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
           </select>
@@ -64,12 +53,12 @@ export default function Venues() {
         {/* Category chips */}
         <div className="flex gap-2 mb-8 flex-wrap">
           <button onClick={() => setCategory('')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${!category ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-colors ${!category ? 'bg-[#18201D] text-white' : 'bg-white border border-black/10 text-black/55 hover:border-black/25'}`}>
             All
           </button>
           {VENUE_CATEGORIES.map(c => (
             <button key={c.value} onClick={() => setCategory(c.value)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${category === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-colors ${category === c.value ? 'bg-[#18201D] text-white' : 'bg-white border border-black/10 text-black/55 hover:border-black/25'}`}>
               {c.icon} {c.label}
             </button>
           ))}
@@ -89,9 +78,9 @@ export default function Venues() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {venues.map(venue => (
-              <Link key={venue.id} to={`/venues/${venue.slug}`} className="card-hover p-5 block">
+              <Link key={venue.id} to={`/venues/${venue.slug}`} className="card-hover p-6 block group">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 text-2xl">
+                  <div className="w-12 h-12 rounded-2xl bg-[#F5C84C]/45 flex items-center justify-center flex-shrink-0 text-2xl">
                     {VENUE_CATEGORIES.find(c => c.value === venue.category)?.icon || '🏢'}
                   </div>
                   <div className="min-w-0">

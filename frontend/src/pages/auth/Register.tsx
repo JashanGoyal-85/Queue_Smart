@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import toast from 'react-hot-toast'
+import { Brand } from '../../components/layout/Brand'
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -40,20 +41,16 @@ export default function Register() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="auth-canvas min-h-screen flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">Q</span>
-            </div>
-            <span className="font-bold text-gray-900 text-lg">QueueSmart</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
-          <p className="text-gray-500 text-sm mt-1">Join thousands saving time daily</p>
+          <div className="mb-7"><Brand /></div>
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#E85D32]">Start saving time</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#18201D]">Create account</h1>
+          <p className="text-gray-500 text-sm mt-1">Your place in line, without standing in it.</p>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-7">
           <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="space-y-4">
             <Input label="Full Name" leftIcon={<User size={14} />} placeholder="John Doe" error={errors.name?.message} {...register('name')} />
             <Input label="Email" type="email" leftIcon={<Mail size={14} />} placeholder="you@example.com" error={errors.email?.message} {...register('email')} />

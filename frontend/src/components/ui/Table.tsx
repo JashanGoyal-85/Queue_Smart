@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, Inbox } from 'lucide-react'
 import { Skeleton } from './Spinner'
 
 interface Column<T> {
@@ -33,14 +33,14 @@ export function Table<T extends { id?: string }>({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-100">
+    <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
+          <tr className="bg-[#F4F1E9] border-b border-black/10">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide ${col.sortable ? 'cursor-pointer hover:text-gray-700 select-none' : ''} ${col.width || ''}`}
+                className={`px-4 py-3.5 text-left font-mono text-[9px] font-semibold text-black/45 uppercase tracking-[0.14em] ${col.sortable ? 'cursor-pointer hover:text-black select-none' : ''} ${col.width || ''}`}
                 onClick={() => col.sortable && onSort?.(String(col.key), sortDir === 'asc' ? 'desc' : 'asc')}
               >
                 <div className="flex items-center gap-1">
@@ -53,19 +53,19 @@ export function Table<T extends { id?: string }>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50">
+        <tbody className="divide-y divide-black/5">
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-4 py-12 text-center">
                 <div className="flex flex-col items-center gap-2 text-gray-400">
-                  {emptyIcon || <span className="text-3xl">📭</span>}
+                  {emptyIcon || <Inbox size={28} strokeWidth={1.5} />}
                   <p className="text-sm">{emptyMessage}</p>
                 </div>
               </td>
             </tr>
           ) : (
             data.map((row, i) => (
-              <tr key={(row as any).id || i} className="hover:bg-gray-50/50 transition-colors">
+              <tr key={(row as any).id || i} className="hover:bg-[#FFF8F2] transition-colors">
                 {columns.map((col) => (
                   <td key={String(col.key)} className="px-4 py-3 text-gray-700">
                     {col.render ? col.render(row) : String((row as any)[col.key] ?? '-')}
@@ -100,7 +100,7 @@ export const Pagination: React.FC<PaginationProps> = ({ page, total, limit, onCh
           const p = Math.max(1, Math.min(page-2, totalPages-4)) + i
           return (
             <button key={p} onClick={() => onChange(p)}
-              className={`px-3 py-1.5 rounded-lg border transition-colors ${p===page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>{p}</button>
+              className={`px-3 py-1.5 rounded-lg border transition-colors ${p===page ? 'bg-[#18201D] text-white border-[#18201D]' : 'border-black/10 hover:bg-[#F4F1E9]'}`}>{p}</button>
           )
         })}
         <button onClick={() => onChange(page+1)} disabled={page===totalPages}

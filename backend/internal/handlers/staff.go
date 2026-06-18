@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,16 +14,17 @@ import (
 )
 
 type StaffHandler struct {
-	queueService *services.QueueService
-	queueRepo    repository.QueueRepository
-	tokenRepo    repository.TokenRepository
-	auditRepo    repository.AuditRepository
+	queueService  *services.QueueService
+	queueRepo     repository.QueueRepository
+	counterRepo   repository.CounterRepository
+	tokenRepo     repository.TokenRepository
+	auditRepo     repository.AuditRepository
 	analyticsRepo repository.AnalyticsRepository
-	userRepo     repository.UserRepository
+	userRepo      repository.UserRepository
 }
 
-func NewStaffHandler(qs *services.QueueService, qr repository.QueueRepository, tr repository.TokenRepository, ar repository.AuditRepository, anr repository.AnalyticsRepository, ur repository.UserRepository) *StaffHandler {
-	return &StaffHandler{queueService: qs, queueRepo: qr, tokenRepo: tr, auditRepo: ar, analyticsRepo: anr, userRepo: ur}
+func NewStaffHandler(qs *services.QueueService, qr repository.QueueRepository, cr repository.CounterRepository, tr repository.TokenRepository, ar repository.AuditRepository, anr repository.AnalyticsRepository, ur repository.UserRepository) *StaffHandler {
+	return &StaffHandler{queueService: qs, queueRepo: qr, counterRepo: cr, tokenRepo: tr, auditRepo: ar, analyticsRepo: anr, userRepo: ur}
 }
 
 func (h *StaffHandler) audit(c *gin.Context, action, entityType, entityID string) {
@@ -68,7 +70,11 @@ func (h *StaffHandler) GetQueueTokens(c *gin.Context) {
 
 func (h *StaffHandler) CallToken(c *gin.Context) {
 	tokenID, _ := uuid.Parse(c.Param("id"))
-	token, err := h.queueService.CallToken(tokenID)
+	counterID, ok := parseCounterID(c)
+	if !ok {
+		return
+	}
+	token, err := h.queueService.CallToken(tokenID, counterID)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -79,13 +85,122 @@ func (h *StaffHandler) CallToken(c *gin.Context) {
 
 func (h *StaffHandler) CallNextToken(c *gin.Context) {
 	queueID, _ := uuid.Parse(c.Param("id"))
-	token, err := h.queueService.CallNextToken(queueID)
+	counterID, ok := parseCounterID(c)
+	if !ok {
+		return
+	}
+	token, err := h.queueService.CallNextToken(queueID, counterID)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.audit(c, "call_next_token", "queue", queueID.String())
 	response.Success(c, token)
+}
+
+func parseCounterID(c *gin.Context) (*uuid.UUID, bool) {
+	var input struct {
+		CounterID string `json:"counter_id"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil && err.Error() != "EOF" {
+		response.ValidationError(c, err.Error())
+		return nil, false
+	}
+	if input.CounterID == "" {
+		return nil, true
+	}
+	id, err := uuid.Parse(input.CounterID)
+	if err != nil {
+		response.ValidationError(c, "invalid counter_id")
+		return nil, false
+	}
+	return &id, true
+}
+
+func (h *StaffHandler) GetCounters(c *gin.Context) {
+	queueID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ValidationError(c, "invalid queue id")
+		return
+	}
+	counters, err := h.counterRepo.GetByQueueID(queueID)
+	if err != nil {
+		response.InternalError(c)
+		return
+	}
+	response.Success(c, counters)
+}
+
+func (h *StaffHandler) CreateCounter(c *gin.Context) {
+	queueID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ValidationError(c, "invalid queue id")
+		return
+	}
+	var input struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
+	input.Name = strings.TrimSpace(input.Name)
+	if input.Name == "" {
+		response.ValidationError(c, "name is required")
+		return
+	}
+	counter := &models.Counter{QueueID: queueID, Name: input.Name, IsActive: true}
+	if err := h.counterRepo.Create(counter); err != nil {
+		response.Error(c, http.StatusBadRequest, "counter name must be unique in this queue")
+		return
+	}
+	h.audit(c, "create_counter", "counter", counter.ID.String())
+	response.Success(c, counter)
+}
+
+func (h *StaffHandler) UpdateCounter(c *gin.Context) {
+	counterID, err := uuid.Parse(c.Param("counterId"))
+	if err != nil {
+		response.ValidationError(c, "invalid counter id")
+		return
+	}
+	counter, err := h.counterRepo.GetByID(counterID)
+	if err != nil {
+		response.NotFound(c, "counter not found")
+		return
+	}
+	var input struct {
+		Name     *string `json:"name"`
+		IsActive *bool   `json:"is_active"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			response.ValidationError(c, "name cannot be empty")
+			return
+		}
+		counter.Name = name
+	}
+	if input.IsActive != nil {
+		if !*input.IsActive {
+			busy, _ := h.counterRepo.HasActiveToken(counterID)
+			if busy {
+				response.Error(c, http.StatusBadRequest, "complete or skip the active token first")
+				return
+			}
+		}
+		counter.IsActive = *input.IsActive
+	}
+	if err := h.counterRepo.Update(counter); err != nil {
+		response.Error(c, http.StatusBadRequest, "could not update counter")
+		return
+	}
+	h.audit(c, "update_counter", "counter", counter.ID.String())
+	response.Success(c, counter)
 }
 
 func (h *StaffHandler) CompleteToken(c *gin.Context) {

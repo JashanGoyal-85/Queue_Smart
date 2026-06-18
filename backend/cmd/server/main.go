@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -25,26 +25,41 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Connect MySQL
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	// Connect PostgreSQL
+dsn := fmt.Sprintf(
+    "host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+    cfg.DBHost,
+    cfg.DBUser,
+    cfg.DBPassword,
+    cfg.DBName,
+    cfg.DBPort,
+    cfg.DBSSLMode,
+)
 
-	var db *gorm.DB
-	var err error
-	for i := 0; i < 10; i++ {
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Warn),
-		})
-		if err == nil {
-			break
-		}
-		log.Printf("DB connection attempt %d failed: %v. Retrying in 3s...", i+1, err)
-		time.Sleep(3 * time.Second)
-	}
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+var db *gorm.DB
+var err error
 
+for i := 0; i < 10; i++ {
+    db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+        Logger: logger.Default.LogMode(logger.Warn),
+    })
+
+    if err == nil {
+        break
+    }
+
+    log.Printf(
+        "DB connection attempt %d failed: %v. Retrying in 3s...",
+        i+1,
+        err,
+    )
+
+    time.Sleep(3 * time.Second)
+}
+
+if err != nil {
+    log.Fatalf("Failed to connect to database: %v", err)
+}
 	// Auto migrate
 	if err := db.AutoMigrate(
 		&models.User{},

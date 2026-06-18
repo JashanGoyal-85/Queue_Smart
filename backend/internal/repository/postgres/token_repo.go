@@ -1,9 +1,9 @@
 package postgres
 
 import (
-	"queuesmart/internal/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"queuesmart/internal/models"
 )
 
 type tokenRepo struct{ db *gorm.DB }
@@ -14,7 +14,7 @@ func (r *tokenRepo) Create(t *models.Token) error { return r.db.Create(t).Error 
 
 func (r *tokenRepo) GetByID(id uuid.UUID) (*models.Token, error) {
 	var t models.Token
-	err := r.db.Where("id = ?", id).Preload("Queue").Preload("User").First(&t).Error
+	err := r.db.Where("id = ?", id).Preload("Queue").Preload("Counter").Preload("User").First(&t).Error
 	return &t, err
 }
 
@@ -24,7 +24,7 @@ func (r *tokenRepo) GetByQueueID(queueID uuid.UUID, statuses []string) ([]models
 	if len(statuses) > 0 {
 		q = q.Where("status IN ?", statuses)
 	}
-	err := q.Order("priority DESC, token_number ASC").Find(&tokens).Error
+	err := q.Preload("Counter").Order("priority DESC, token_number ASC").Find(&tokens).Error
 	return tokens, err
 }
 

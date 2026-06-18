@@ -52,7 +52,7 @@ export default function JoinQueue() {
   const trackUrl = joined ? `${window.location.origin}/track/${joined.id}` : ''
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="auth-canvas min-h-screen flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-md">
         <Link to={`/venues`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6">
           <ArrowLeft size={14} /> Back
@@ -79,19 +79,20 @@ export default function JoinQueue() {
             </Button>
           </div>
         ) : (
-          <div className="card p-6 animate-fade-in">
-            <h1 className="text-xl font-bold text-gray-900 mb-1">Join Queue</h1>
+          <div className="card p-6 sm:p-8 animate-fade-in">
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Take a digital number</p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#18201D] mb-1">Join queue</h1>
             <p className="text-sm text-gray-500 mb-5">{queue?.name || 'Loading...'}</p>
 
             {queue && (
-              <div className="grid grid-cols-2 gap-3 mb-6 p-4 bg-gray-50 rounded-xl">
-                <div className="text-center">
+              <div className="grid grid-cols-2 gap-px mb-6 overflow-hidden rounded-2xl bg-black/10">
+                <div className="bg-[#F4F1E9] p-4 text-center">
                   <p className="text-xs text-gray-400 mb-1">Currently waiting</p>
                   <p className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-1">
                     <Users size={16} className="text-blue-500" />{queue.current_count}
                   </p>
                 </div>
-                <div className="text-center">
+                <div className="bg-[#F4F1E9] p-4 text-center">
                   <p className="text-xs text-gray-400 mb-1">Est. wait time</p>
                   <p className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-1">
                     <Clock size={16} className="text-blue-500" />
@@ -119,9 +120,6 @@ export default function JoinQueue() {
                 <Button type="submit" variant="primary" className="w-full" loading={joinMutation.isPending}>
                   Join Queue
                 </Button>
-                <p className="text-center text-xs text-gray-400">
-                  Have an account? <Link to={`/login?redirect=/join/${queueId}`} className="text-blue-600">Sign in</Link> for a better experience
-                </p>
               </form>
             )}
           </div>

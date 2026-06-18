@@ -5,6 +5,7 @@ import { staffAPI } from '../../services/api'
 import { Layout } from '../../components/layout/Layout'
 import { PageSpinner } from '../../components/ui/Spinner'
 import type { Queue } from '../../types'
+import { BarChart3 } from 'lucide-react'
 
 export default function StaffAnalytics() {
   const { data: queues = [], isLoading } = useQuery({
@@ -28,11 +29,11 @@ export default function StaffAnalytics() {
   return (
     <Layout breadcrumb="Analytics">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Queue Analytics</h1>
+        <div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Performance desk</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[#18201D]">Queue analytics</h1></div>
 
         {analyticsData.length === 0 ? (
           <div className="card p-10 text-center text-gray-400">
-            <div className="text-4xl mb-3">📊</div>
+            <BarChart3 size={32} className="mx-auto mb-3" />
             <p>No analytics data yet</p>
           </div>
         ) : (
@@ -67,7 +68,7 @@ export default function StaffAnalytics() {
                   <XAxis dataKey="queue_name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Bar dataKey="waiting" name="Waiting" fill="#3B82F6" radius={[4,4,0,0]} />
+                  <Bar dataKey="waiting" name="Waiting" fill="#E85D32" radius={[4,4,0,0]} />
                   <Bar dataKey="completed" name="Completed" fill="#16A34A" radius={[4,4,0,0]} />
                   <Bar dataKey="cancelled" name="Cancelled" fill="#DC2626" radius={[4,4,0,0]} />
                 </BarChart>

@@ -1,526 +1,361 @@
-<div align="center">
-
-<img src="https://img.shields.io/badge/QueueSmart-v1.0.0-2563EB?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyek0xMiA2Yy4yOCAwIC41LjIyLjUuNXY1aDMuNWMuMjggMCAuNS4yMi41LjVzLS4yMi41LS41LjVIMTJjLS4yOCAwLS41LS4yMi0uNS0uNVY2LjVjMC0uMjguMjItLjUuNS0uNXoiLz48L3N2Zz4=" />
-
 # QueueSmart
 
-### 🚀 A Real-Time Smart Queue Management System
+QueueSmart is a real-time queue management platform for hospitals, banks, salons, government offices, restaurants, and other service venues. Visitors can join a queue from their phone, track their live position, and return when their turn is close. Staff operate queues and service counters from a dedicated dashboard, while administrators manage venues, teams, analytics, and platform access.
 
-**Skip the wait. Save your time.**  
-QueueSmart lets people join queues at hospitals, banks, salons, and more — from their phone — and get notified the moment their turn arrives.
+> Take a digital number. Keep your place. Lose the line.
 
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+## Highlights
 
-</div>
+- Guest queue joining -- no account or app download required
+- QR-based queue entry and token sharing
+- Live token and queue updates over WebSockets
+- Estimated wait times and live queue positions
+- Multi-counter queue operation
+- Priority token handling
+- Queue pause, resume, open, and close controls
+- In-app notifications and token history
+- Venue, staff, queue, and role management
+- Peak-hour, queue, and platform analytics
+- Responsive public experience and role-based dashboards
 
----
+## User roles
 
-## 📋 Table of Contents
+| Role | Capabilities |
+| --- | --- |
+| Visitor | Browse venues, join as a guest, receive a token, and track its position |
+| User | Manage profile, view token history, statistics, and notifications |
+| Staff | Operate assigned queues, call/skip/complete tokens, and manage counters |
+| Admin | Create queues, manage venue staff, view analytics, and inspect audit logs |
+| Super admin | Manage all venues, users, roles, and platform-wide statistics |
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Run with Docker (Recommended)](#run-with-docker-recommended)
-  - [Run Locally (Dev Mode)](#run-locally-dev-mode)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [WebSocket Events](#-websocket-events)
-- [User Roles](#-user-roles)
-- [Screenshots](#-screenshots)
-- [Contributing](#-contributing)
-- [License](#-license)
+## Multi-counter workflow
 
----
+Each queue can contain multiple service counters. Staff can:
 
-## 🌟 Overview
+1. Create and activate counters for a queue.
+2. Select the counter from which they are working.
+3. Call the next token or a specific waiting token.
+4. Complete or skip the active token before calling another customer.
 
-QueueSmart is a production-ready, full-stack queue management platform built for venues that serve large numbers of people daily. It eliminates physical queues by allowing visitors to join digitally via a QR code or a link — no app download required.
+A counter cannot serve two active tokens at the same time. When a token is called, the visitor's tracking screen shows the assigned counter.
 
-Staff manage queues in real-time from a dedicated dashboard. Admins configure queues and manage staff. Super-admins oversee the entire platform. Everyone gets live updates via WebSockets.
-
----
-
-## ✨ Features
-
-### For Visitors (Public)
-- 🔍 **Browse Venues** — Search by name, city, or category (hospital, bank, salon, canteen, government)
-- 📱 **QR Code Join** — Scan to join instantly, no account needed (guest join supported)
-- 🎟️ **Live Token Tracker** — Real-time position updates and estimated wait time via WebSocket
-- 🔔 **Turn Notification** — Instant "It's your turn!" alert with celebration screen
-- 📊 **Wait Estimation** — AI-driven wait time predictions based on historical data
-
-### For Users (Registered)
-- 📁 **Token History** — View all past and active queue tokens
-- 🔔 **Notification Centre** — In-app notifications (token called, queue updates, announcements)
-- ⚙️ **Account Settings** — Profile management and password change
-- 📈 **Personal Stats** — Total queues joined, average wait, time saved
-
-### For Staff
-- ⚡ **Real-time Queue Board** — Live list of waiting tokens with priority indicators
-- ▶️ **Call Next / Call Specific** — Flexible token calling with one click
-- ✅ **Complete / Skip / Cancel** — Full token lifecycle management
-- ⭐ **Priority Toggle** — Instantly promote any token to priority
-- ⏸️ **Queue Controls** — Open, pause, resume, or close any queue instantly
-
-### For Admins
-- ➕ **Queue Management** — Create, configure, and delete queues
-- 👥 **Staff Management** — Add/remove staff members, assign roles
-- 📊 **Peak Hours Heatmap** — 7×24 visual heatmap of busiest times
-- 🗒️ **Audit Logs** — Full log of all staff actions
-
-### For Super-Admins
-- 🏢 **Venue Management** — Create and manage all venues on the platform
-- 👤 **User Management** — View all users and change roles
-- 📡 **System Overview** — Platform-wide stats and health check
-
----
-
-## 🛠 Tech Stack
+## Technology stack
 
 ### Backend
-| Technology | Purpose |
-|---|---|
-| **Go 1.22+** | Core application language |
-| **Gin** | HTTP web framework |
-| **GORM** | ORM for PostgreSQL |
-| **PostgreSQL 15** | Primary database |
-| **Redis 7** | Pub/Sub for WebSocket broadcast + token storage |
-| **Gorilla WebSocket** | Real-time bidirectional communication |
-| **JWT (golang-jwt/jwt/v5)** | Access & refresh token authentication |
-| **RabbitMQ** | Message queue for async processing |
-| **bcrypt** | Password hashing |
-| **go-qrcode** | QR code generation |
-| **golang.org/x/time/rate** | Per-IP rate limiting |
+
+- Go
+- Gin HTTP framework
+- GORM
+- PostgreSQL 15
+- Redis 7 for pub/sub and token-related state
+- Gorilla WebSocket
+- JWT access and refresh tokens
+- bcrypt password hashing
+- go-qrcode
 
 ### Frontend
-| Technology | Purpose |
-|---|---|
-| **React 18** | UI library |
-| **TypeScript 5** | Type safety |
-| **Vite** | Build tool and dev server |
-| **Tailwind CSS** | Utility-first styling |
-| **Zustand** | Global state management |
-| **React Query (TanStack)** | Server state, caching, refetching |
-| **Axios** | HTTP client with auth interceptors |
-| **React Router v6** | Client-side routing |
-| **Recharts** | Analytics charts |
-| **React Hook Form + Zod** | Form validation |
-| **React Hot Toast** | Toast notifications |
+
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- TanStack Query
+- Zustand
+- React Router
+- Axios
+- React Hook Form and Zod
+- Recharts
 
 ### Infrastructure
-| Technology | Purpose |
-|---|---|
-| **Docker + Docker Compose** | Container orchestration |
-| **Nginx** | Frontend serving + reverse proxy |
-| **Multi-stage Docker builds** | Optimized production images |
 
----
+- Docker and Docker Compose
+- Nginx
+- RabbitMQ service available for future asynchronous workloads
 
-## 🏗 Architecture
+## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Browser / Client                        │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │ HTTP / WebSocket
-┌──────────────────────────────▼──────────────────────────────────┐
-│                    Nginx (Port 3000)                            │
-│              Frontend SPA  │  Proxy → /api/*  → :8080          │
-│                            │  Proxy → /ws/*   → :8080          │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────┐
-│                  Go API Server (Port 8080)                      │
-│                                                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │   Auth   │  │  Queue   │  │  Staff   │  │  SuperAdmin  │   │
-│  │ Handler  │  │ Handler  │  │ Handler  │  │   Handler    │   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘   │
-│       │              │              │                │           │
-│  ┌────▼──────────────▼──────────────▼────────────────▼──────┐  │
-│  │                     Service Layer                        │  │
-│  │   QueueService │ NotificationService │ PredictionService │  │
-│  └────┬───────────────────────────────────────────────┬─────┘  │
-│       │                                               │         │
-│  ┌────▼────────────┐                      ┌───────────▼──────┐ │
-│  │  Repository     │                      │  WebSocket Hub   │ │
-│  │  (GORM/PgSQL)   │                      │  (Redis Pub/Sub) │ │
-│  └────┬────────────┘                      └───────────┬──────┘ │
-└───────┼───────────────────────────────────────────────┼────────┘
-        │                                               │
-┌───────▼──────────┐     ┌───────────────┐   ┌─────────▼──────┐
-│   PostgreSQL 15  │     │   RabbitMQ    │   │    Redis 7     │
-│   (Primary DB)   │     │  (Async Jobs) │   │ (Cache/PubSub) │
-└──────────────────┘     └───────────────┘   └────────────────┘
+```text
+Browser
+  |
+  +-- HTTP -----------+
+  +-- WebSocket ------+
+                      |
+                      v
+                Nginx / Vite
+                      |
+                      v
+                 Go API (Gin)
+             +--------+---------+
+             v        v         v
+         PostgreSQL  Redis   WebSocket Hub
+             |        |
+             +--------+-- live queue events
 ```
 
----
+The backend follows a handler -> service -> repository structure. PostgreSQL stores application data, Redis supports real-time event distribution, and the React client uses REST APIs plus queue/token WebSocket channels.
 
-## 📁 Project Structure
+## Project structure
 
-```
-QueueSmart/
-├── docker-compose.yml
-├── backend/
-│   ├── Dockerfile
-│   ├── .env.example
-│   ├── go.mod / go.sum
-│   ├── cmd/
-│   │   └── server/
-│   │       └── main.go              # Application entry point
-│   ├── config/
-│   │   └── config.go                # Config loader from env
-│   ├── internal/
-│   │   ├── models/                  # GORM domain models
-│   │   │   ├── user.go
-│   │   │   ├── venue.go
-│   │   │   ├── queue.go
-│   │   │   ├── token.go
-│   │   │   ├── analytics.go
-│   │   │   ├── notification.go
-│   │   │   ├── audit_log.go
-│   │   │   └── constants.go
-│   │   ├── handlers/                # HTTP handler functions
-│   │   │   ├── auth.go
-│   │   │   ├── user.go
-│   │   │   ├── venue.go
-│   │   │   ├── queue.go
-│   │   │   ├── staff.go
-│   │   │   ├── admin.go
-│   │   │   ├── superadmin.go
-│   │   │   └── ws.go
-│   │   ├── services/                # Business logic layer
-│   │   │   ├── queue_service.go
-│   │   │   ├── notification_service.go
-│   │   │   └── prediction_service.go
-│   │   ├── repository/              # Data access layer
-│   │   │   ├── interfaces.go
-│   │   │   └── postgres/
-│   │   │       ├── user_repo.go
-│   │   │       ├── venue_repo.go
-│   │   │       ├── queue_repo.go
-│   │   │       ├── token_repo.go
-│   │   │       ├── analytics_repo.go
-│   │   │       ├── notification_repo.go
-│   │   │       └── audit_repo.go
-│   │   ├── middleware/
-│   │   │   ├── auth.go              # JWT middleware
-│   │   │   ├── rbac.go              # Role-based access
-│   │   │   ├── ratelimit.go         # Per-IP rate limiting
-│   │   │   ├── logger.go
-│   │   │   └── cors.go
-│   │   └── websocket/
-│   │       ├── hub.go               # WebSocket hub (Redis pub/sub)
-│   │       └── client.go            # WebSocket client handler
-│   └── pkg/
-│       ├── jwt/jwt.go
-│       ├── redis/redis.go
-│       ├── qrcode/qrcode.go
-│       └── response/response.go
-│
-└── frontend/
-    ├── Dockerfile
-    ├── nginx.conf
-    ├── package.json
-    ├── vite.config.ts
-    ├── tailwind.config.js
-    └── src/
-        ├── App.tsx                  # Routes & role guards
-        ├── main.tsx
-        ├── types/index.ts           # TypeScript domain models
-        ├── services/
-        │   ├── api.ts               # Axios + all API calls
-        │   └── websocket.ts         # WebSocket client wrapper
-        ├── stores/
-        │   ├── authStore.ts         # Zustand auth state
-        │   └── notificationStore.ts
-        ├── components/
-        │   ├── layout/              # Sidebar, Navbar, Layout
-        │   ├── ui/                  # Button, Input, Badge, Modal, Table...
-        │   ├── token/               # TokenCard
-        │   └── queue/               # QRCodeCard
-        ├── pages/
-        │   ├── public/              # Landing, Venues, VenueDetail, JoinQueue, TrackToken
-        │   ├── auth/                # Login, Register, ForgotPassword, ResetPassword, VerifyEmail
-        │   ├── user/                # Dashboard, MyTokens, Notifications, Settings
-        │   ├── staff/               # StaffDashboard, QueueManagement, Analytics
-        │   ├── admin/               # AdminDashboard, CreateQueue, QueueSettings, StaffManagement, PeakHours
-        │   └── superadmin/          # SystemOverview, VenueManagement, UserManagement
-        └── utils/
-            ├── formatters.ts
-            └── constants.ts
+```text
+Queue_Smart/
+|-- backend/
+|   |-- cmd/server/               # API entry point and routes
+|   |-- config/                   # Environment configuration
+|   |-- internal/
+|   |   |-- handlers/             # HTTP handlers
+|   |   |-- middleware/           # Auth, RBAC, CORS, logs, rate limits
+|   |   |-- models/               # Database models
+|   |   |-- repository/           # Repository interfaces and PostgreSQL code
+|   |   |-- services/             # Queue, notification, and prediction logic
+|   |   +-- websocket/            # Real-time hub and clients
+|   +-- pkg/                      # JWT, QR, Redis, and response helpers
+|-- frontend/
+|   |-- src/
+|   |   |-- components/           # Shared UI, navigation, token and queue UI
+|   |   |-- pages/                # Public, auth, user, staff, admin pages
+|   |   |-- services/             # REST and WebSocket clients
+|   |   |-- stores/               # Zustand state
+|   |   |-- types/                # TypeScript domain types
+|   |   +-- utils/                # Constants and formatting helpers
+|   +-- nginx.conf
+|-- docker-compose.yml
++-- README.md
 ```
 
----
+## Getting started
 
-## 🚀 Getting Started
+### Option 1: Docker Compose
 
-### Prerequisites
+Requirements:
 
-Make sure you have these installed:
+- Docker
+- Docker Compose
 
-| Tool | Version | Download |
-|---|---|---|
-| **Docker** | 24+ | [docker.com](https://www.docker.com/get-started) |
-| **Docker Compose** | v2+ | Included with Docker Desktop |
-| **Git** | any | [git-scm.com](https://git-scm.com/) |
+Start the complete stack:
 
-> For local development without Docker: Go 1.22+ and Node.js 20+
-
----
-
-### Run with Docker (Recommended)
-
-This single command starts the entire stack — PostgreSQL, Redis, RabbitMQ, Go API, and React frontend.
-
-**1. Clone the repository**
-```bash
-git clone https://github.com/YOUR_USERNAME/QueueSmart.git
-cd QueueSmart
-```
-
-**2. Start all services**
 ```bash
 docker compose up --build
 ```
 
-**3. Open in browser**
-| Service | URL |
-|---|---|
-| 🌐 Frontend |  |
-| ⚙️ API | |
-| 🐇 RabbitMQ Dashboard |  |
-| 🗄️ PostgreSQL |  |
-| 🔴 Redis |  |
+Services:
 
-**Run in background (detached mode)**
-```bash
-docker compose up --build -d
-```
+| Service | URL/port |
+| --- | --- |
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8080 |
+| Health check | http://localhost:8080/health |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+| RabbitMQ | localhost:5672 |
+| RabbitMQ management | http://localhost:15672 |
 
-**Stop all services**
+Stop the stack:
+
 ```bash
 docker compose down
 ```
 
-**Stop and remove all data (volumes)**
+Remove containers and database volumes:
+
 ```bash
 docker compose down -v
 ```
 
-**View logs**
-```bash
-# All services
-docker compose logs -f
+### Option 2: Local development
 
-# Specific service
-docker compose logs -f app
-docker compose logs -f frontend
-```
+Requirements:
 
-**Rebuild a single service after code change**
-```bash
-docker compose up --build app
-docker compose up --build frontend
-```
+- Go matching the version declared in `backend/go.mod`
+- Node.js and npm
+- PostgreSQL
+- Redis
 
----
+#### Backend
 
-### Run Locally (Dev Mode)
-
-**Step 1 — Start infrastructure only**
-```bash
-docker compose up postgres redis rabbitmq -d
-```
-
-**Step 2 — Run the backend**
 ```bash
 cd backend
-cp .env.example .env      # Edit .env if needed
+cp .env.example .env
 go mod download
-go run ./cmd/server/main.go
+go run ./cmd/server
 ```
 
+On PowerShell, use:
 
-**Step 3 — Run the frontend**
+```powershell
+cd backend
+Copy-Item .env.example .env
+go mod download
+go run ./cmd/server
+```
+
+The API starts on `http://localhost:8080`. GORM automatically creates or updates the required tables during startup.
+
+#### Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+The frontend starts on `http://localhost:3000` and proxies `/api` and `/ws` requests to the backend.
 
-## 📡 API Reference
+## Environment variables
 
-All endpoints are prefixed with `/api/v1`
+Create `backend/.env` from `backend/.env.example`.
 
-### Auth
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/auth/register` | ❌ | Register new user |
-| `POST` | `/auth/login` | ❌ | Login, returns JWT tokens |
-| `POST` | `/auth/logout` | ✅ | Invalidate refresh token |
-| `POST` | `/auth/refresh` | ❌ | Get new access token |
-| `POST` | `/auth/forgot-password` | ❌ | Send password reset email |
-| `POST` | `/auth/reset-password` | ❌ | Reset password with token |
-| `POST` | `/auth/verify-email` | ❌ | Verify email address |
+| Variable | Default | Description |
+| --- | --- | --- |
+| `APP_ENV` | `development` | Application environment |
+| `APP_PORT` | `8080` | API port |
+| `JWT_SECRET` | Not set | Secret used to sign JWTs; replace in production |
+| `JWT_ACCESS_EXPIRES` | `15m` | Access-token lifetime |
+| `JWT_REFRESH_EXPIRES` | `168h` | Refresh-token lifetime |
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `queuesmart` | PostgreSQL user |
+| `DB_PASSWORD` | `queuesmart123` | PostgreSQL password |
+| `DB_NAME` | `queuesmart` | PostgreSQL database |
+| `DB_SSLMODE` | `disable` | PostgreSQL SSL mode |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
+| `RABBITMQ_URL` | `amqp://guest:guest@localhost:5672/` | RabbitMQ connection URL |
+| `BASE_URL` | `http://localhost:8080` | Public backend URL |
+| `FRONTEND_URL` | `http://localhost:3000` | Allowed frontend origin |
 
-### Venues
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/venues` | ❌ | List all active venues (filterable) |
-| `GET` | `/venues/:slug` | ❌ | Get venue + its active queues |
+Never use the example database password or JWT secret in production.
 
-### Queues & Tokens
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/queues/:id` | Optional | Queue status + wait time |
-| `POST` | `/queues/:id/join` | Optional | Join a queue (guest or auth) |
-| `GET` | `/queues/:id/position/:tokenId` | ❌ | Token position in queue |
-| `GET` | `/queues/:id/qr` | ❌ | Get queue QR code (PNG) |
-| `GET` | `/tokens/:id` | ✅ | Get token details |
-| `POST` | `/tokens/:id/cancel` | ✅ | Cancel own token |
+## API overview
 
-### User (Requires auth)
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/me` | Get own profile |
-| `PUT` | `/me` | Update name/phone/avatar |
-| `PUT` | `/me/password` | Change password |
-| `GET` | `/me/tokens` | Token history (paginated) |
-| `GET` | `/me/stats` | Personal stats |
-| `GET` | `/me/notifications` | All notifications |
-| `PUT` | `/me/notifications/:id` | Mark notification read |
+All REST endpoints use the `/api/v1` prefix.
 
-### Staff (`staff`, `admin`, `superadmin`)
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/staff/queues` | All queues for venue |
-| `GET` | `/staff/queues/:id/tokens` | All active tokens in queue |
-| `POST` | `/staff/queues/:id/call-next` | Call next token |
-| `POST` | `/staff/tokens/:id/call` | Call specific token |
-| `POST` | `/staff/tokens/:id/complete` | Mark token completed |
-| `POST` | `/staff/tokens/:id/skip` | Skip token |
-| `POST` | `/staff/tokens/:id/priority` | Toggle priority |
+### Authentication
+
+| Method | Endpoint |
+| --- | --- |
+| `POST` | `/auth/register` |
+| `POST` | `/auth/login` |
+| `POST` | `/auth/logout` |
+| `POST` | `/auth/refresh` |
+| `POST` | `/auth/forgot-password` |
+| `POST` | `/auth/reset-password` |
+| `GET` | `/auth/verify-email` |
+
+### Public queues and venues
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/venues` | Browse and filter venues |
+| `GET` | `/venues/:slug` | Get venue details and queues |
+| `GET` | `/queues/:id` | Get queue status |
+| `GET` | `/queues/:id/qr` | Generate a queue QR code |
+| `POST` | `/queues/:id/join` | Join a queue as a guest or user |
+| `GET` | `/queues/:id/position/:tokenId` | Get live position and wait estimate |
+| `GET` | `/tokens/:id` | Get token details |
+
+### Authenticated user
+
+| Method | Endpoint |
+| --- | --- |
+| `GET`, `PUT` | `/me` |
+| `PUT` | `/me/password` |
+| `GET` | `/me/tokens` |
+| `GET` | `/me/stats` |
+| `GET` | `/me/notifications` |
+| `PUT` | `/me/notifications/:id/read` |
+| `PUT` | `/me/notifications/read-all` |
+| `POST` | `/tokens/:id/cancel` |
+
+### Staff and counters
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/staff/queues` | List assigned venue queues |
+| `GET` | `/staff/queues/:id/tokens` | List active tokens |
+| `GET`, `POST` | `/staff/queues/:id/counters` | List or create counters |
+| `PUT` | `/staff/counters/:counterId` | Rename or activate/deactivate a counter |
+| `POST` | `/staff/queues/:id/call-next` | Call the next token at a counter |
+| `POST` | `/staff/tokens/:id/call` | Call a specific token |
+| `POST` | `/staff/tokens/:id/complete` | Complete service |
+| `POST` | `/staff/tokens/:id/skip` | Skip a token |
+| `POST` | `/staff/tokens/:id/priority` | Toggle token priority |
 | `PUT` | `/staff/queues/:id/status` | Change queue status |
-| `GET` | `/staff/queues/:id/analytics` | Today's queue analytics |
+| `GET` | `/staff/queues/:id/analytics` | Get queue analytics |
 
-### Admin (`admin`, `superadmin`)
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/admin/queues` | Create new queue |
-| `PUT` | `/admin/queues/:id` | Update queue settings |
-| `DELETE` | `/admin/queues/:id` | Soft delete queue |
-| `GET` | `/admin/venues/:id/stats` | Venue statistics |
-| `GET` | `/admin/venues/:id/peak-hours` | Peak hours heatmap data |
-| `GET` | `/admin/venues/:id/users` | All venue staff |
-| `POST` | `/admin/venues/:id/staff` | Add staff member |
-| `DELETE` | `/admin/venues/:id/staff/:userId` | Remove staff |
-| `GET` | `/admin/audit-logs` | Audit log |
+Counter-aware call requests accept an optional body:
 
-### Super Admin (`superadmin` only)
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/superadmin/venues` | Create venue |
-| `GET` | `/superadmin/venues` | List all venues |
-| `PUT` | `/superadmin/venues/:id` | Update venue |
-| `GET` | `/superadmin/users` | List all users |
-| `PUT` | `/superadmin/users/:id/role` | Change user role |
-| `GET` | `/superadmin/stats` | System-wide statistics |
+```json
+{
+  "counter_id": "counter-uuid"
+}
+```
 
-### WebSocket
-| Endpoint | Description |
-|---|---|
-| `WS /ws/queue/:id` | Subscribe to queue-level events |
-| `WS /ws/token/:id` | Subscribe to personal token events |
+### Admin and super admin
 
----
+Admin endpoints manage queues, venue statistics, staff, peak hours, and audit logs under `/admin`. Super-admin endpoints manage platform venues, users, roles, and system statistics under `/superadmin`.
 
-## 📡 WebSocket Events
+## WebSocket channels
 
-### Queue channel (`/ws/queue/:id`)
-| Event | Payload | Description |
-|---|---|---|
-| `queue.joined` | `{ tokenNumber, displayCode, currentCount }` | Someone joined the queue |
-| `token_called` | `{ tokenID, tokenNumber, displayCode, calledAt }` | A token was called |
-| `position.updated` | `{ tokenID, status }` | Token completed/skipped |
-| `queue.status_changed` | `{ queueID, status }` | Queue opened/paused/closed |
+| Channel | URL | Typical events |
+| --- | --- | --- |
+| Queue | `/ws/queue/:id` | `queue.joined`, `token_called`, `position.updated`, `queue.status_changed` |
+| Token | `/ws/token/:id` | `your_turn`, `token.cancelled` |
 
-### Token channel (`/ws/token/:id`)
-| Event | Payload | Description |
-|---|---|---|
-| `your_turn` | `{ tokenID, displayCode, calledAt }` | 🎉 It's this token's turn |
-| `token.cancelled` | `{ tokenID, status }` | Token was cancelled |
+When a token is called, the event includes its display code and assigned counter when available.
 
----
+## Useful commands
 
-## 👤 User Roles
+### Frontend
 
-| Role | Access |
-|---|---|
-| **User** | Browse venues, join queues, track tokens, manage own account |
-| **Staff** | All user access + call/complete/skip tokens, manage queue status |
-| **Admin** | All staff access + create/edit queues, manage staff, view analytics |
-| **SuperAdmin** | Full platform access — manage all venues, users, and system settings |
+```bash
+npm run dev
+npm run build
+npm run preview
+```
 
----
+The repository currently includes a lint script, but an ESLint configuration must be added before `npm run lint` can run.
 
-## 🤝 Contributing
+### Backend
 
-Contributions are welcome! Here's how to get started:
+```bash
+go run ./cmd/server
+go test ./...
+```
 
-1. **Fork** the repository
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Commit your changes** following [Conventional Commits](https://www.conventionalcommits.org/)
-   ```bash
-   git commit -m "feat: add email notification on token called"
-   ```
-4. **Push** to your fork
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. **Open a Pull Request** against `main`
+## Security notes
 
-### Code Style
-- **Go:** Follow standard `gofmt` formatting. Run `go vet ./...` before committing.
-- **TypeScript:** ESLint + Prettier. Run `npm run lint` before committing.
+- Replace all example secrets and passwords before deployment.
+- Serve the application over HTTPS in production.
+- Restrict allowed CORS origins.
+- Keep access-token lifetimes short and rotate refresh tokens as needed.
+- Place PostgreSQL, Redis, and RabbitMQ on private networks.
+- Review role assignments and audit logs regularly.
 
----
+## Current development notes
 
-## 📄 License
+- Email verification and password-reset delivery require a production email provider.
+- RabbitMQ is included in the infrastructure but is not yet required by the core queue flow.
+- The frontend build reports a large-bundle warning; route-based code splitting is a useful future optimization.
+- Automated backend test files and end-to-end browser tests can be expanded further.
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+## Roadmap ideas
 
----
+- SMS and WhatsApp notifications
+- Appointment and walk-in hybrid scheduling
+- No-show grace periods and token recall
+- Public television queue boards with voice announcements
+- Queue transfers between departments
+- Customer feedback and service ratings
+- CSV and PDF reporting
+- Improved forecasting using staffing and recent service velocity
 
-## 🙏 Acknowledgements
+## Contributing
 
-- [Gin Web Framework](https://github.com/gin-gonic/gin)
-- [GORM](https://gorm.io/)
-- [TanStack Query](https://tanstack.com/query)
-- [Zustand](https://github.com/pmndrs/zustand)
-- [Recharts](https://recharts.org/)
+1. Create a feature branch.
+2. Make focused changes.
+3. Run `go test ./...` in `backend`.
+4. Run `npm run build` in `frontend`.
+5. Open a pull request describing the change and verification performed.
 
----
+## License
 
-<div align="center">
-
-**Made with ❤️ by [Jashan Goyal](https://github.com/jashangoyal)**
-
-⭐ Star this repo if you find it useful!
-
-</div>
+Add a `LICENSE` file before publishing the project publicly. Until then, all rights remain with the project owner.

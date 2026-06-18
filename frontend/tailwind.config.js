@@ -4,13 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#2563EB', light: '#EFF6FF', dark: '#1D4ED8', 50: '#EFF6FF', 100: '#DBEAFE', 500: '#3B82F6', 600: '#2563EB', 700: '#1D4ED8' },
+        primary: { DEFAULT: '#E85D32', light: '#FFF0E8', dark: '#B83B1B', 50: '#FFF7F2', 100: '#FFE3D4', 500: '#F4774E', 600: '#E85D32', 700: '#B83B1B' },
         success: '#16A34A',
         warning: '#D97706',
         error: '#DC2626',
-        surface: '#F9FAFB',
+        surface: '#F4F1E9',
       },
-      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      fontFamily: { sans: ['Manrope', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'], mono: ['IBM Plex Mono', 'Consolas', 'monospace'] },
       animation: {
         shimmer: 'shimmer 2s infinite linear',
         'pulse-ring': 'pulse-ring 1.5s cubic-bezier(0.4,0,0.6,1) infinite',

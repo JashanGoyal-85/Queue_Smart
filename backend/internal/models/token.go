@@ -10,6 +10,7 @@ import (
 type Token struct {
 	ID                   uuid.UUID  `json:"id" gorm:"type:char(36);primaryKey"`
 	QueueID              uuid.UUID  `json:"queue_id" gorm:"type:char(36);not null"`
+	CounterID            *uuid.UUID `json:"counter_id" gorm:"type:char(36);index"`
 	UserID               *uuid.UUID `json:"user_id" gorm:"type:char(36)"`
 	TokenNumber          int        `json:"token_number" gorm:"not null"`
 	DisplayCode          string     `json:"display_code" gorm:"not null"`
@@ -27,6 +28,7 @@ type Token struct {
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 	Queue                *Queue     `json:"queue,omitempty" gorm:"foreignKey:QueueID"`
+	Counter              *Counter   `json:"counter,omitempty" gorm:"foreignKey:CounterID"`
 	User                 *User      `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 
@@ -36,5 +38,3 @@ func (t *Token) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-
-

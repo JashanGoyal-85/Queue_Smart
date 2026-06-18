@@ -26,45 +26,46 @@ func main() {
 	cfg := config.Load()
 
 	// Connect PostgreSQL
-dsn := fmt.Sprintf(
-    "host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-    cfg.DBHost,
-    cfg.DBUser,
-    cfg.DBPassword,
-    cfg.DBName,
-    cfg.DBPort,
-    cfg.DBSSLMode,
-)
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		cfg.DBHost,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBPort,
+		cfg.DBSSLMode,
+	)
 
-var db *gorm.DB
-var err error
+	var db *gorm.DB
+	var err error
 
-for i := 0; i < 10; i++ {
-    db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-        Logger: logger.Default.LogMode(logger.Warn),
-    })
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Warn),
+		})
 
-    if err == nil {
-        break
-    }
+		if err == nil {
+			break
+		}
 
-    log.Printf(
-        "DB connection attempt %d failed: %v. Retrying in 3s...",
-        i+1,
-        err,
-    )
+		log.Printf(
+			"DB connection attempt %d failed: %v. Retrying in 3s...",
+			i+1,
+			err,
+		)
 
-    time.Sleep(3 * time.Second)
-}
+		time.Sleep(3 * time.Second)
+	}
 
-if err != nil {
-    log.Fatalf("Failed to connect to database: %v", err)
-}
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 	// Auto migrate
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Venue{},
 		&models.Queue{},
+		&models.Counter{},
 		&models.Token{},
 		&models.QueueAnalytics{},
 		&models.Notification{},
@@ -83,29 +84,30 @@ if err != nil {
 
 	// Init repositories
 	var (
-		userRepo     repository.UserRepository     = postgresr.NewUserRepository(db)
-		venueRepo    repository.VenueRepository    = postgresr.NewVenueRepository(db)
-		queueRepo    repository.QueueRepository    = postgresr.NewQueueRepository(db)
-		tokenRepo    repository.TokenRepository    = postgresr.NewTokenRepository(db)
-		analyticsRepo repository.AnalyticsRepository = postgresr.NewAnalyticsRepository(db)
-		notifRepo    repository.NotificationRepository = postgresr.NewNotificationRepository(db)
-		auditRepo    repository.AuditRepository    = postgresr.NewAuditRepository(db)
+		userRepo      repository.UserRepository         = postgresr.NewUserRepository(db)
+		venueRepo     repository.VenueRepository        = postgresr.NewVenueRepository(db)
+		queueRepo     repository.QueueRepository        = postgresr.NewQueueRepository(db)
+		counterRepo   repository.CounterRepository      = postgresr.NewCounterRepository(db)
+		tokenRepo     repository.TokenRepository        = postgresr.NewTokenRepository(db)
+		analyticsRepo repository.AnalyticsRepository    = postgresr.NewAnalyticsRepository(db)
+		notifRepo     repository.NotificationRepository = postgresr.NewNotificationRepository(db)
+		auditRepo     repository.AuditRepository        = postgresr.NewAuditRepository(db)
 	)
 
 	// Init services
-	queueSvc   := services.NewQueueService(queueRepo, tokenRepo, analyticsRepo, redisClient, hub)
-	notifSvc   := services.NewNotificationService(notifRepo)
-	predSvc    := services.NewPredictionService(analyticsRepo, queueRepo)
+	queueSvc := services.NewQueueService(queueRepo, counterRepo, tokenRepo, analyticsRepo, redisClient, hub)
+	notifSvc := services.NewNotificationService(notifRepo)
+	predSvc := services.NewPredictionService(analyticsRepo, queueRepo)
 
 	// Init handlers
-	authH        := handlers.NewAuthHandler(userRepo, redisClient, cfg)
-	userH        := handlers.NewUserHandler(userRepo, tokenRepo, notifSvc)
-	venueH       := handlers.NewVenueHandler(venueRepo)
-	queueH       := handlers.NewQueueHandler(queueSvc, tokenRepo, cfg)
-	staffH       := handlers.NewStaffHandler(queueSvc, queueRepo, tokenRepo, auditRepo, analyticsRepo, userRepo)
-	adminH       := handlers.NewAdminHandler(queueRepo, venueRepo, userRepo, auditRepo, analyticsRepo, predSvc)
-	superAdminH  := handlers.NewSuperAdminHandler(venueRepo, userRepo, queueRepo, tokenRepo)
-	wsH          := handlers.NewWSHandler(hub)
+	authH := handlers.NewAuthHandler(userRepo, redisClient, cfg)
+	userH := handlers.NewUserHandler(userRepo, tokenRepo, notifSvc)
+	venueH := handlers.NewVenueHandler(venueRepo)
+	queueH := handlers.NewQueueHandler(queueSvc, tokenRepo, cfg)
+	staffH := handlers.NewStaffHandler(queueSvc, queueRepo, counterRepo, tokenRepo, auditRepo, analyticsRepo, userRepo)
+	adminH := handlers.NewAdminHandler(queueRepo, venueRepo, userRepo, auditRepo, analyticsRepo, predSvc)
+	superAdminH := handlers.NewSuperAdminHandler(venueRepo, userRepo, queueRepo, tokenRepo)
+	wsH := handlers.NewWSHandler(hub)
 
 	// Gin setup
 	if cfg.AppEnv == "production" {
@@ -171,6 +173,9 @@ if err != nil {
 	{
 		staff.GET("/queues", staffH.GetStaffQueues)
 		staff.GET("/queues/:id/tokens", staffH.GetQueueTokens)
+		staff.GET("/queues/:id/counters", staffH.GetCounters)
+		staff.POST("/queues/:id/counters", staffH.CreateCounter)
+		staff.PUT("/counters/:counterId", staffH.UpdateCounter)
 		staff.GET("/queues/:id/analytics", staffH.GetQueueAnalytics)
 		staff.POST("/queues/:id/call-next", staffH.CallNextToken)
 		staff.PUT("/queues/:id/status", staffH.UpdateQueueStatus)

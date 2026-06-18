@@ -1,5 +1,5 @@
 import React from 'react'
-import { Clock, CheckCircle, XCircle, AlertCircle, Phone } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, AlertCircle, Phone, Monitor } from 'lucide-react'
 import type { Token } from '../../types'
 import { Badge, statusToBadgeColor } from '../ui/Badge'
 import { formatWaitTime, formatDateTime } from '../../utils/formatters'
@@ -65,6 +65,12 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, showActions, onCanc
               <span className="text-sm text-gray-700">{token.guest_phone}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {token.counter && ['called', 'serving'].includes(token.status) && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+          <Monitor size={14} /> Proceed to {token.counter.name}
         </div>
       )}
 

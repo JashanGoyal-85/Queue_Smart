@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, Bell, Settings, LogOut, Users, Building2,
-  ClipboardList, BarChart3, Shield, ChevronLeft, ChevronRight, Menu, X
+  ClipboardList, BarChart3, Shield, ChevronLeft, ChevronRight, X
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { Avatar } from '../ui/Avatar'
@@ -46,11 +46,11 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; mobil
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-gray-100 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">Q</span>
+      <div className={`flex items-center gap-3 px-4 py-5 border-b border-white/10 ${collapsed ? 'justify-center' : ''}`}>
+        <div className="w-9 h-9 bg-[#E85D32] rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-extrabold text-[11px]">QS</span>
         </div>
-        {!collapsed && <span className="font-bold text-gray-900 text-lg">QueueSmart</span>}
+        {!collapsed && <div><span className="block font-extrabold text-white text-base tracking-tight">QueueSmart</span><span className="block font-mono text-[8px] uppercase tracking-[0.18em] text-white/35">Operations</span></div>}
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -68,18 +68,18 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; mobil
         })}
       </nav>
 
-      <div className={`border-t border-gray-100 p-3 space-y-1`}>
+      <div className={`border-t border-white/10 p-3 space-y-1`}>
         {!collapsed && (
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
             <Avatar name={user?.name} src={user?.avatar_url} size="sm" />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <p className="text-xs text-white/35 capitalize">{user?.role}</p>
             </div>
           </div>
         )}
         <button onClick={handleLogout}
-          className={`sidebar-link w-full text-red-500 hover:bg-red-50 hover:text-red-600 ${collapsed ? 'justify-center px-2' : ''}`}>
+          className={`sidebar-link w-full text-white/45 hover:bg-white/10 hover:text-[#F5C84C] ${collapsed ? 'justify-center px-2' : ''}`}>
           <LogOut size={18} />
           {!collapsed && <span>Logout</span>}
         </button>
@@ -90,10 +90,10 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; mobil
   return (
     <>
       {/* Desktop sidebar */}
-      <div className={`hidden lg:flex flex-col border-r border-gray-100 bg-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'} relative`}>
+      <div className={`hidden lg:flex flex-col bg-[#18201D] transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-64'} relative`}>
         <SidebarContent />
         <button onClick={onToggle}
-          className="absolute -right-3 top-6 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 z-10">
+          className="absolute -right-3 top-7 w-6 h-6 bg-[#F5C84C] text-[#18201D] border border-black/10 rounded-full flex items-center justify-center shadow-sm hover:scale-105 z-10">
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
       </div>
@@ -102,8 +102,8 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; mobil
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/30" onClick={onMobileClose} />
-          <div className="relative w-64 bg-white h-full shadow-xl">
-            <button onClick={onMobileClose} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-gray-100">
+          <div className="relative w-72 bg-[#18201D] h-full shadow-xl text-white">
+            <button onClick={onMobileClose} className="absolute top-4 right-4 p-1 rounded-lg text-white/60 hover:bg-white/10">
               <X size={18} />
             </button>
             <SidebarContent />

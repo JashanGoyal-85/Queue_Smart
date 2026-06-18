@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Ticket, Clock, CheckCircle, TrendingUp, Plus, Search } from 'lucide-react'
+import { Ticket, Clock, CheckCircle, TrendingUp, Plus } from 'lucide-react'
 import { userAPI } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { Layout } from '../../components/layout/Layout'
@@ -11,10 +11,11 @@ import { formatWaitTime } from '../../utils/formatters'
 import type { Token, Stats } from '../../types'
 
 const StatCard = ({ icon, label, value, sub, color = 'blue' }: { icon: React.ReactNode; label: string; value: string | number; sub?: string; color?: string }) => (
-  <div className="stat-card">
-    <div className={`w-10 h-10 bg-${color}-50 rounded-xl flex items-center justify-center mb-3`}>{icon}</div>
-    <p className="text-xs text-gray-500 font-medium">{label}</p>
-    <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
+  <div className="stat-card relative overflow-hidden">
+    <div className="absolute right-0 top-0 h-16 w-16 translate-x-5 -translate-y-5 rounded-full bg-[#F5C84C]/30" />
+    <div className="w-10 h-10 bg-[#F4F1E9] rounded-xl flex items-center justify-center mb-4">{icon}</div>
+    <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-black/40 font-medium">{label}</p>
+    <p className="text-2xl font-extrabold text-[#18201D] mt-1">{value}</p>
     {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
   </div>
 )
@@ -45,8 +46,9 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{greeting}, {user?.name?.split(' ')[0]}! 👋</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Here's what's happening with your queues</p>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Personal queue desk</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[#18201D]">{greeting}, {user?.name?.split(' ')[0]}.</h1>
+            <p className="text-sm text-gray-500 mt-1">Here is where your time stands today.</p>
           </div>
           <Link to="/venues" className="btn-primary py-2">
             <Plus size={16} /> Join a Queue

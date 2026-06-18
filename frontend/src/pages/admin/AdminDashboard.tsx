@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Settings, Trash2, PlayCircle, PauseCircle } from 'lucide-react'
+import { Plus, Settings, Trash2, PlayCircle, PauseCircle, BarChart3, Users, ClipboardPlus, ScrollText } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { staffAPI, adminAPI } from '../../services/api'
 import { Layout } from '../../components/layout/Layout'
@@ -39,7 +39,8 @@ export default function AdminDashboard() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#E85D32]">Venue operations</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[#18201D]">Admin panel</h1>
             <p className="text-sm text-gray-500 mt-0.5">{user?.name} · Managing venue</p>
           </div>
           <Link to="/admin/queues/new">
@@ -50,14 +51,14 @@ export default function AdminDashboard() {
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Peak Hours', href: '/admin/analytics', emoji: '📊' },
-            { label: 'Staff Mgmt', href: '/admin/staff', emoji: '👥' },
-            { label: 'Create Queue', href: '/admin/queues/new', emoji: '➕' },
-            { label: 'Audit Logs', href: '/admin/audit', emoji: '📋' },
+            { label: 'Peak Hours', href: '/admin/analytics', icon: BarChart3 },
+            { label: 'Staff Mgmt', href: '/admin/staff', icon: Users },
+            { label: 'Create Queue', href: '/admin/queues/new', icon: ClipboardPlus },
+            { label: 'Audit Logs', href: '/admin/audit', icon: ScrollText },
           ].map(item => (
             <Link key={item.href} to={item.href} className="card-hover p-4 text-center">
-              <div className="text-2xl mb-1">{item.emoji}</div>
-              <p className="text-sm font-medium text-gray-700">{item.label}</p>
+              <item.icon size={20} className="mx-auto mb-3 text-[#E85D32]" />
+              <p className="text-sm font-bold text-[#18201D]">{item.label}</p>
             </Link>
           ))}
         </div>
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
             <div className="space-y-3">{[1,2,3].map(i => <CardSkeleton key={i} />)}</div>
           ) : queues.length === 0 ? (
             <div className="card p-10 text-center">
-              <div className="text-4xl mb-3">➕</div>
+              <ClipboardPlus size={32} className="mx-auto mb-3 text-black/30" />
               <p className="text-gray-500 mb-3">No queues yet. Create your first one.</p>
               <Link to="/admin/queues/new"><Button variant="primary">Create Queue</Button></Link>
             </div>

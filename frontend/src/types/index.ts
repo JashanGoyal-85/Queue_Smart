@@ -47,11 +47,22 @@ export interface Queue {
   created_at: string
   updated_at: string
   venue?: Venue
+  counters?: Counter[]
+}
+
+export interface Counter {
+  id: string
+  queue_id: string
+  name: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Token {
   id: string
   queue_id: string
+  counter_id: string | null
   user_id: string | null
   token_number: number
   display_code: string
@@ -68,6 +79,7 @@ export interface Token {
   completed_at: string | null
   created_at: string
   queue?: Queue
+  counter?: Counter
   user?: User
 }
 

@@ -21,7 +21,7 @@ export default function VerifyEmail() {
   if (mutation.isPending) return <PageSpinner />
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="auth-canvas min-h-screen flex items-center justify-center p-4">
       <div className="card p-8 text-center max-w-sm w-full animate-fade-in">
         {mutation.isSuccess ? (
           <>

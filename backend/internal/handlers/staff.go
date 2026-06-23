@@ -43,17 +43,35 @@ func (h *StaffHandler) GetStaffQueues(c *gin.Context) {
 	uid, _ := c.Get("userID")
 	userID, _ := uuid.Parse(uid.(string))
 	user, err := h.userRepo.GetByID(userID)
-	if err != nil || user.VenueID == nil {
-		response.Error(c, http.StatusBadRequest, "No venue assigned")
+	if err != nil {
+		response.InternalError(c)
 		return
 	}
-	queues, err := h.queueRepo.GetByVenueID(*user.VenueID)
+
+	// Allow an optional ?venue_id= query param so superadmins (who have no
+	// VenueID on their own profile) can view queues for any venue.
+	var venueID uuid.UUID
+	if qv := c.Query("venue_id"); qv != "" {
+		venueID, err = uuid.Parse(qv)
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "Invalid venue_id")
+			return
+		}
+	} else if user.VenueID != nil {
+		venueID = *user.VenueID
+	} else {
+		response.Error(c, http.StatusBadRequest, "No venue assigned. Pass ?venue_id= or assign a venue to your account.")
+		return
+	}
+
+	queues, err := h.queueRepo.GetByVenueID(venueID)
 	if err != nil {
 		response.InternalError(c)
 		return
 	}
 	response.Success(c, queues)
 }
+
 
 func (h *StaffHandler) GetQueueTokens(c *gin.Context) {
 	queueID, _ := uuid.Parse(c.Param("id"))

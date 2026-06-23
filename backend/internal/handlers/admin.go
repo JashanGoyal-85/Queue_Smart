@@ -31,12 +31,13 @@ func (h *AdminHandler) CreateQueue(c *gin.Context) {
 	user, _ := h.userRepo.GetByID(userID)
 
 	var input struct {
-		Name                string `json:"name" binding:"required"`
-		Description         string `json:"description"`
-		Category            string `json:"category"`
-		MaxCapacity         int    `json:"max_capacity"`
-		AvgServeTimeSeconds int    `json:"avg_serve_time_seconds"`
-		IsPriorityEnabled   bool   `json:"is_priority_enabled"`
+		Name                string     `json:"name" binding:"required"`
+		Description         string     `json:"description"`
+		Category            string     `json:"category"`
+		MaxCapacity         int        `json:"max_capacity"`
+		AvgServeTimeSeconds int        `json:"avg_serve_time_seconds"`
+		IsPriorityEnabled   bool       `json:"is_priority_enabled"`
+		VenueID             *uuid.UUID `json:"venue_id"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.ValidationError(c, err.Error())
@@ -48,8 +49,22 @@ func (h *AdminHandler) CreateQueue(c *gin.Context) {
 	if input.AvgServeTimeSeconds == 0 {
 		input.AvgServeTimeSeconds = 180
 	}
+
+	// Determine which venue to create the queue in:
+	// - If the request body supplies a venue_id (superadmin flow), use it.
+	// - Otherwise fall back to the logged-in user's assigned venue (admin flow).
+	var venueID uuid.UUID
+	if input.VenueID != nil {
+		venueID = *input.VenueID
+	} else if user.VenueID != nil {
+		venueID = *user.VenueID
+	} else {
+		response.Error(c, http.StatusBadRequest, "No venue associated with your account. Please provide a venue_id.")
+		return
+	}
+
 	queue := &models.Queue{
-		VenueID:             *user.VenueID,
+		VenueID:             venueID,
 		Name:                input.Name,
 		Description:         input.Description,
 		Category:            input.Category,

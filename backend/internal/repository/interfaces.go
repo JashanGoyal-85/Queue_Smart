@@ -9,6 +9,7 @@ type UserRepository interface {
 	Create(user *models.User) error
 	GetByID(id uuid.UUID) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
+	GetByGoogleID(googleID string) (*models.User, error)
 	Update(user *models.User) error
 	Delete(id uuid.UUID) error
 	List(page, limit int, role, search string) ([]models.User, int64, error)
@@ -75,3 +76,12 @@ type AuditRepository interface {
 	Create(log *models.AuditLog) error
 	List(page, limit int, userID *uuid.UUID, action string) ([]models.AuditLog, int64, error)
 }
+
+type InvitationRepository interface {
+	Create(inv *models.Invitation) error
+	GetByToken(token string) (*models.Invitation, error)
+	GetByEmail(email string) (*models.Invitation, error)
+	MarkAccepted(id uuid.UUID) error
+	ListByVenue(venueID uuid.UUID) ([]models.Invitation, error)
+}
+

@@ -100,8 +100,8 @@ export default function VenueManagement() {
         }
       >
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Venue Name *" value={form.name} onChange={e => update('name', e.target.value)} />
-          <Input label="Slug *" value={form.slug} onChange={e => update('slug', e.target.value)} placeholder="my-venue" />
+          <Input label="Venue Name" required value={form.name} onChange={e => update('name', e.target.value)} />
+          <Input label="Slug" required value={form.slug} onChange={e => update('slug', e.target.value)} placeholder="my-venue" />
           <Input label="City" value={form.city} onChange={e => update('city', e.target.value)} />
           <Input label="State" value={form.state} onChange={e => update('state', e.target.value)} />
           <Input label="Country" value={form.country} onChange={e => update('country', e.target.value)} />

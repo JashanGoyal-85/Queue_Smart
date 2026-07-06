@@ -11,7 +11,8 @@ type User struct {
 	ID           uuid.UUID      `json:"id" gorm:"type:char(36);primaryKey"`
 	Name         string         `json:"name" gorm:"type:varchar(191);not null"`
 	Email        string         `json:"email" gorm:"type:varchar(191);uniqueIndex;not null"`
-	PasswordHash string         `json:"-" gorm:"type:varchar(191);not null"`
+	PasswordHash string         `json:"-" gorm:"type:varchar(255)"`
+	GoogleID     string         `json:"google_id,omitempty" gorm:"type:varchar(191);index"`
 	Phone        string         `json:"phone"`
 	AvatarURL    string         `json:"avatar_url"`
 	Role         string         `json:"role" gorm:"default:'user'"`

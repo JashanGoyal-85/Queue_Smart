@@ -143,3 +143,44 @@ func (h *SuperAdminHandler) GetSystemStats(c *gin.Context) {
 		"platform":     "QueueSmart",
 	})
 }
+
+// AssignVenue sets or updates the venue_id for a specific user.
+// PUT /superadmin/users/:id/venue  { "venue_id": "uuid" }
+func (h *SuperAdminHandler) AssignVenue(c *gin.Context) {
+	userID, _ := uuid.Parse(c.Param("id"))
+
+	var input struct {
+		VenueID string `json:"venue_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
+
+	venueID, err := uuid.Parse(input.VenueID)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid venue_id")
+		return
+	}
+
+	// Verify venue exists
+	if _, err := h.venueRepo.GetByID(venueID); err != nil {
+		response.NotFound(c, "Venue not found")
+		return
+	}
+
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "User not found")
+		return
+	}
+
+	user.VenueID = &venueID
+	if err := h.userRepo.Update(user); err != nil {
+		response.InternalError(c)
+		return
+	}
+
+	response.Success(c, user)
+}
+

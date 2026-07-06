@@ -19,6 +19,7 @@ import (
 	postgresr "queuesmart/internal/repository/postgres"
 	"queuesmart/internal/services"
 	"queuesmart/internal/websocket"
+	"queuesmart/pkg/email"
 	pkgredis "queuesmart/pkg/redis"
 )
 
@@ -70,6 +71,7 @@ func main() {
 		&models.QueueAnalytics{},
 		&models.Notification{},
 		&models.AuditLog{},
+		&models.Invitation{},
 	); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
@@ -92,6 +94,7 @@ func main() {
 		analyticsRepo repository.AnalyticsRepository    = postgresr.NewAnalyticsRepository(db)
 		notifRepo     repository.NotificationRepository = postgresr.NewNotificationRepository(db)
 		auditRepo     repository.AuditRepository        = postgresr.NewAuditRepository(db)
+		inviteRepo    repository.InvitationRepository   = postgresr.NewInvitationRepository(db)
 	)
 
 	// Init services
@@ -99,14 +102,18 @@ func main() {
 	notifSvc := services.NewNotificationService(notifRepo)
 	predSvc := services.NewPredictionService(analyticsRepo, queueRepo)
 
+	// Init email config (SMTP or console fallback in dev)
+	emailCfg := email.FromEnv()
+
 	// Init handlers
-	authH := handlers.NewAuthHandler(userRepo, redisClient, cfg)
+	authH := handlers.NewAuthHandler(userRepo, redisClient, cfg, emailCfg)
 	userH := handlers.NewUserHandler(userRepo, tokenRepo, notifSvc)
 	venueH := handlers.NewVenueHandler(venueRepo)
 	queueH := handlers.NewQueueHandler(queueSvc, tokenRepo, cfg)
-	staffH := handlers.NewStaffHandler(queueSvc, queueRepo, counterRepo, tokenRepo, auditRepo, analyticsRepo, userRepo)
-	adminH := handlers.NewAdminHandler(queueRepo, venueRepo, userRepo, auditRepo, analyticsRepo, predSvc)
+	staffH := handlers.NewStaffHandler(queueSvc, queueRepo, counterRepo, tokenRepo, auditRepo, analyticsRepo, userRepo, hub)
+	adminH := handlers.NewAdminHandler(queueRepo, venueRepo, userRepo, auditRepo, analyticsRepo, predSvc, inviteRepo, emailCfg)
 	superAdminH := handlers.NewSuperAdminHandler(venueRepo, userRepo, queueRepo, tokenRepo)
+	inviteH := handlers.NewInviteHandler(inviteRepo, userRepo, venueRepo)
 	wsH := handlers.NewWSHandler(hub)
 
 	// Gin setup
@@ -143,6 +150,12 @@ func main() {
 		auth.POST("/forgot-password", authH.ForgotPassword)
 		auth.POST("/reset-password", authH.ResetPassword)
 		auth.GET("/verify-email", authH.VerifyEmail)
+		// Google OAuth
+		auth.GET("/google", authH.GoogleLogin)
+		auth.GET("/google/callback", authH.GoogleCallback)
+		// Staff invitation (public — no auth needed)
+		auth.GET("/invite/validate", inviteH.ValidateInvite)
+		auth.POST("/invite/accept", inviteH.AcceptInvite)
 	}
 
 	// Public venue/queue routes
@@ -183,6 +196,7 @@ func main() {
 		staff.POST("/tokens/:id/complete", staffH.CompleteToken)
 		staff.POST("/tokens/:id/skip", staffH.SkipToken)
 		staff.POST("/tokens/:id/priority", staffH.TogglePriority)
+		staff.PATCH("/tokens/:id/extend", staffH.ExtendTokenTime)
 	}
 
 	// Admin routes
@@ -194,7 +208,8 @@ func main() {
 		admin.GET("/venues/:id/stats", adminH.GetVenueStats)
 		admin.GET("/venues/:id/peak-hours", adminH.GetPeakHours)
 		admin.GET("/venues/:id/users", adminH.GetVenueUsers)
-		admin.POST("/venues/:id/users", adminH.InviteStaffUser)
+		admin.POST("/venues/:id/users", adminH.InviteStaffUser)     // now sends invite email
+		admin.GET("/venues/:id/invites", adminH.ListVenueInvites)   // pending invites list
 		admin.DELETE("/venues/:id/users/:userId", adminH.RemoveStaff)
 		admin.GET("/audit-logs", adminH.GetAuditLogs)
 	}
@@ -207,6 +222,7 @@ func main() {
 		sa.PUT("/venues/:id", superAdminH.UpdateVenue)
 		sa.GET("/users", superAdminH.ListAllUsers)
 		sa.PUT("/users/:id/role", superAdminH.UpdateUserRole)
+		sa.PUT("/users/:id/venue", superAdminH.AssignVenue)   // assign/reassign venue
 		sa.GET("/system-stats", superAdminH.GetSystemStats)
 	}
 

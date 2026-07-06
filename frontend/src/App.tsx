@@ -15,6 +15,8 @@ import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
 import VerifyEmail from './pages/auth/VerifyEmail'
+import AcceptInvite from './pages/auth/AcceptInvite'
+import GoogleCallback from './pages/auth/GoogleCallback'
 
 // User dashboard
 import Dashboard from './pages/user/Dashboard'
@@ -69,6 +71,10 @@ export default function App() {
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        {/* Google OAuth callback — must be public (not GuestRoute) so tokens can be stored */}
+        <Route path="/auth/callback" element={<GoogleCallback />} />
+        {/* Staff invitation accept — public, no auth required */}
+        <Route path="/accept-invite" element={<AcceptInvite />} />
 
         {/* User */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

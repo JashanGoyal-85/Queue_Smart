@@ -38,7 +38,7 @@ export default function ForgotPassword() {
           ) : (
             <div className="space-y-4">
               <Input label="Email" type="email" leftIcon={<Mail size={14} />} value={email}
-                onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
+                onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
               <Button variant="primary" className="w-full" loading={mutation.isPending}
                 onClick={() => mutation.mutate()}>Send Reset Link</Button>
               <Link to="/login" className="block text-center text-sm text-gray-500 hover:text-gray-700">← Back to login</Link>

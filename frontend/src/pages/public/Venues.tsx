@@ -98,7 +98,10 @@ export default function Venues() {
                   <p className="text-xs text-gray-500 line-clamp-2 mb-3">{venue.description}</p>
                 )}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-50 text-xs text-gray-400">
-                  <span className="flex items-center gap-1"><Users size={11} /> {venue.queues?.length || 0} queues</span>
+                  <span className="flex items-center gap-1">
+                    <Users size={11} />
+                    {(venue.queues || []).filter((q: any) => q.status === 'active').length} active queue{(venue.queues || []).filter((q: any) => q.status === 'active').length !== 1 ? 's' : ''}
+                  </span>
                   <span className="text-blue-600 font-medium">View queues →</span>
                 </div>
               </Link>

@@ -45,7 +45,7 @@ export default function QueueSettings() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Queue Settings</h1>
         <div className="card p-6 space-y-5">
-          <Input label="Queue Name" value={form.name || ''} onChange={e => update('name', e.target.value)} />
+          <Input label="Queue Name" required value={form.name || ''} onChange={e => update('name', e.target.value)} />
           <Textarea label="Description" value={form.description || ''} onChange={e => update('description', e.target.value)} />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Max Capacity" type="number" value={form.max_capacity || 100}

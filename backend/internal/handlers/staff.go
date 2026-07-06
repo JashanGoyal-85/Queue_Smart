@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,8 +9,10 @@ import (
 	"queuesmart/internal/models"
 	"queuesmart/internal/repository"
 	"queuesmart/internal/services"
+	"queuesmart/internal/websocket"
 	"queuesmart/pkg/response"
 )
+
 
 type StaffHandler struct {
 	queueService  *services.QueueService
@@ -21,10 +22,11 @@ type StaffHandler struct {
 	auditRepo     repository.AuditRepository
 	analyticsRepo repository.AnalyticsRepository
 	userRepo      repository.UserRepository
+	hub           *websocket.Hub
 }
 
-func NewStaffHandler(qs *services.QueueService, qr repository.QueueRepository, cr repository.CounterRepository, tr repository.TokenRepository, ar repository.AuditRepository, anr repository.AnalyticsRepository, ur repository.UserRepository) *StaffHandler {
-	return &StaffHandler{queueService: qs, queueRepo: qr, counterRepo: cr, tokenRepo: tr, auditRepo: ar, analyticsRepo: anr, userRepo: ur}
+func NewStaffHandler(qs *services.QueueService, qr repository.QueueRepository, cr repository.CounterRepository, tr repository.TokenRepository, ar repository.AuditRepository, anr repository.AnalyticsRepository, ur repository.UserRepository, hub *websocket.Hub) *StaffHandler {
+	return &StaffHandler{queueService: qs, queueRepo: qr, counterRepo: cr, tokenRepo: tr, auditRepo: ar, analyticsRepo: anr, userRepo: ur, hub: hub}
 }
 
 func (h *StaffHandler) audit(c *gin.Context, action, entityType, entityID string) {
@@ -48,8 +50,9 @@ func (h *StaffHandler) GetStaffQueues(c *gin.Context) {
 		return
 	}
 
-	// Allow an optional ?venue_id= query param so superadmins (who have no
-	// VenueID on their own profile) can view queues for any venue.
+	// Allow an optional ?venue_id= query param (used by superadmins).
+	// For regular staff/admin, fall back to their profile VenueID.
+	// If neither is available, return an empty list gracefully.
 	var venueID uuid.UUID
 	if qv := c.Query("venue_id"); qv != "" {
 		venueID, err = uuid.Parse(qv)
@@ -60,7 +63,8 @@ func (h *StaffHandler) GetStaffQueues(c *gin.Context) {
 	} else if user.VenueID != nil {
 		venueID = *user.VenueID
 	} else {
-		response.Error(c, http.StatusBadRequest, "No venue assigned. Pass ?venue_id= or assign a venue to your account.")
+		// No venue assigned — return empty list instead of error
+		response.Success(c, []interface{}{})
 		return
 	}
 
@@ -75,9 +79,22 @@ func (h *StaffHandler) GetStaffQueues(c *gin.Context) {
 
 func (h *StaffHandler) GetQueueTokens(c *gin.Context) {
 	queueID, _ := uuid.Parse(c.Param("id"))
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	_ = page
-	statuses := []string{models.TokenStatusWaiting, models.TokenStatusCalled, models.TokenStatusServing}
+
+	// ?status=all returns every token; default returns only active ones
+	var statuses []string
+	if c.Query("status") == "all" {
+		statuses = []string{
+			models.TokenStatusWaiting,
+			models.TokenStatusCalled,
+			models.TokenStatusServing,
+			models.TokenStatusCompleted,
+			models.TokenStatusCancelled,
+			models.TokenStatusSkipped,
+		}
+	} else {
+		statuses = []string{models.TokenStatusWaiting, models.TokenStatusCalled, models.TokenStatusServing}
+	}
+
 	tokens, err := h.tokenRepo.GetByQueueID(queueID, statuses)
 	if err != nil {
 		response.InternalError(c)
@@ -283,3 +300,55 @@ func (h *StaffHandler) GetQueueAnalytics(c *gin.Context) {
 		"total":     waiting + completed + cancelled,
 	})
 }
+
+// ExtendTokenTime lets staff add extra seconds to a token's estimated wait time.
+// Body: { "add_seconds": N }  (1–3600)
+func (h *StaffHandler) ExtendTokenTime(c *gin.Context) {
+	tokenID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ValidationError(c, "invalid token id")
+		return
+	}
+
+	var input struct {
+		AddSeconds int `json:"add_seconds" binding:"required,min=1,max=3600"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.ValidationError(c, "add_seconds must be between 1 and 3600")
+		return
+	}
+
+	token, err := h.tokenRepo.GetByID(tokenID)
+	if err != nil {
+		response.NotFound(c, "Token not found")
+		return
+	}
+
+	if token.Status != models.TokenStatusWaiting && token.Status != models.TokenStatusCalled {
+		response.Error(c, http.StatusBadRequest, "Can only extend wait time for waiting or called tokens")
+		return
+	}
+
+	token.EstimatedWaitSeconds += input.AddSeconds
+	if err := h.tokenRepo.Update(token); err != nil {
+		response.InternalError(c)
+		return
+	}
+
+	// Broadcast real-time update to the user's TrackToken page
+	h.hub.Broadcast(
+		"token:"+tokenID.String(),
+		"time_extended",
+		map[string]interface{}{
+			"token_id":               tokenID.String(),
+			"estimated_wait_seconds": token.EstimatedWaitSeconds,
+			"added_seconds":          input.AddSeconds,
+		},
+	)
+	// Also notify the queue room so staff dashboards refresh
+	h.hub.Broadcast("queue:"+token.QueueID.String(), "token.updated", token)
+
+	h.audit(c, "extend_token_time", "token", tokenID.String())
+	response.Success(c, token)
+}
+

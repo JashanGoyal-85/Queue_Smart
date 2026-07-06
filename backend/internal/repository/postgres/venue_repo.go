@@ -35,7 +35,10 @@ func (r *venueRepo) List(page, limit int, city, category, search string) ([]mode
 	if search != "" { q = q.Where("name LIKE ? OR city LIKE ?", "%"+search+"%", "%"+search+"%") }
 	q.Count(&total)
 	offset := (page - 1) * limit
-	err := q.Offset(offset).Limit(limit).Order("name ASC").Find(&venues).Error
+	// Preload Queues so venue cards can show real queue counts
+	err := q.Offset(offset).Limit(limit).Order("name ASC").
+		Preload("Queues", "deleted_at IS NULL").
+		Find(&venues).Error
 	return venues, total, err
 }
 

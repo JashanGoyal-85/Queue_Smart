@@ -240,12 +240,24 @@ func (s *QueueService) GetTokenPosition(queueID, tokenID uuid.UUID) (int, int, e
 	}
 	pos, err := s.tokenRepo.GetPosition(queueID, token.TokenNumber, token.Priority)
 	queue, _ := s.queueRepo.GetByID(queueID)
-	estimatedWait := 0
+
+	// Base estimate: how many people ahead × avg serve time per person
+	positionBased := 0
 	if queue != nil {
-		estimatedWait = queue.AvgServeTimeSeconds * pos
+		positionBased = queue.AvgServeTimeSeconds * pos
 	}
+
+	// If staff manually extended this token's wait time, honour whichever is larger.
+	// This ensures manual extensions are always visible to the user even if the
+	// queue moves faster than the position-based estimate.
+	estimatedWait := positionBased
+	if token.EstimatedWaitSeconds > estimatedWait {
+		estimatedWait = token.EstimatedWaitSeconds
+	}
+
 	return pos, estimatedWait, err
 }
+
 
 func (s *QueueService) updateAvgServeTime(queueID uuid.UUID, actualSeconds int) {
 	queue, err := s.queueRepo.GetByID(queueID)

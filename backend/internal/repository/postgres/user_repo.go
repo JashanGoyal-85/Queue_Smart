@@ -24,6 +24,12 @@ func (r *userRepo) GetByEmail(email string) (*models.User, error) {
 	return &u, err
 }
 
+func (r *userRepo) GetByGoogleID(googleID string) (*models.User, error) {
+	var u models.User
+	err := r.db.Where("google_id = ? AND deleted_at IS NULL", googleID).First(&u).Error
+	return &u, err
+}
+
 func (r *userRepo) Update(u *models.User) error { return r.db.Save(u).Error }
 
 func (r *userRepo) Delete(id uuid.UUID) error {

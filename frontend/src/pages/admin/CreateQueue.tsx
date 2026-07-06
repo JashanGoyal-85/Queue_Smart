@@ -96,7 +96,8 @@ export default function CreateQueue() {
           )}
 
           <Input
-            label="Queue Name *"
+            label="Queue Name"
+            required
             value={form.name}
             onChange={e => update('name', e.target.value)}
             placeholder="e.g. General Consultation"

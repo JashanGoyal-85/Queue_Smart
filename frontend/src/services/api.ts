@@ -35,6 +35,13 @@ api.interceptors.response.use(
 
 export default api
 
+// Invite (public — no auth)
+export const inviteAPI = {
+  validate: (token: string) => api.get(`/auth/invite/validate?token=${token}`),
+  accept: (data: { token: string; name: string; password: string }) =>
+    api.post('/auth/invite/accept', data),
+}
+
 // Auth
 export const authAPI = {
   register: (data: { name: string; email: string; password: string; phone?: string }) =>
@@ -45,6 +52,12 @@ export const authAPI = {
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data: { token: string; password: string }) => api.post('/auth/reset-password', data),
   verifyEmail: (code: string) => api.get(`/auth/verify-email?code=${code}`),
+  // Used by GoogleCallback — fetch profile with an explicit token (store may not be set yet)
+  me: (token: string) => axios.get('/api/v1/me', {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  // Redirect URL for initiating Google OAuth
+  googleLoginURL: () => '/api/v1/auth/google',
 }
 
 // User
@@ -80,7 +93,7 @@ export const queueAPI = {
 // Staff
 export const staffAPI = {
   getQueues: () => api.get('/staff/queues'),
-  getQueueTokens: (id: string) => api.get(`/staff/queues/${id}/tokens`),
+  getQueueTokens: (id: string, status?: 'all' | 'active') => api.get(`/staff/queues/${id}/tokens${status === 'all' ? '?status=all' : ''}`),
   getCounters: (queueId: string) => api.get(`/staff/queues/${queueId}/counters`),
   createCounter: (queueId: string, name: string) => api.post(`/staff/queues/${queueId}/counters`, { name }),
   updateCounter: (id: string, data: { name?: string; is_active?: boolean }) => api.put(`/staff/counters/${id}`, data),
@@ -91,6 +104,7 @@ export const staffAPI = {
   togglePriority: (id: string) => api.post(`/staff/tokens/${id}/priority`),
   updateQueueStatus: (id: string, status: string) => api.put(`/staff/queues/${id}/status`, { status }),
   getAnalytics: (id: string) => api.get(`/staff/queues/${id}/analytics`),
+  extendTokenTime: (id: string, addSeconds: number) => api.patch(`/staff/tokens/${id}/extend`, { add_seconds: addSeconds }),
 }
 
 // Admin
@@ -102,6 +116,7 @@ export const adminAPI = {
     api.get(`/admin/venues/${venueId}/stats`, { params: { from, to } }),
   getPeakHours: (venueId: string) => api.get(`/admin/venues/${venueId}/peak-hours`),
   getVenueUsers: (venueId: string) => api.get(`/admin/venues/${venueId}/users`),
+  getVenueInvites: (venueId: string) => api.get(`/admin/venues/${venueId}/invites`),
   inviteStaff: (venueId: string, data: { name: string; email: string; role?: string }) =>
     api.post(`/admin/venues/${venueId}/users`, data),
   removeStaff: (venueId: string, userId: string) => api.delete(`/admin/venues/${venueId}/users/${userId}`),
@@ -116,5 +131,7 @@ export const superAdminAPI = {
   listUsers: (role?: string, q?: string) => api.get('/superadmin/users', { params: { role, q } }),
   updateUserRole: (id: string, data: { role: string; venue_id?: string }) =>
     api.put(`/superadmin/users/${id}/role`, data),
+  assignVenue: (userId: string, venueId: string) =>
+    api.put(`/superadmin/users/${userId}/venue`, { venue_id: venueId }),
   getSystemStats: () => api.get('/superadmin/system-stats'),
 }

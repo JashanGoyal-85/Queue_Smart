@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { UserPlus, Trash2, Building2 } from 'lucide-react'
+import { UserPlus, Trash2, Building2, Mail, Clock, CheckCircle } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useVenueStore } from '../../stores/venueStore'
 import { adminAPI, superAdminAPI } from '../../services/api'
@@ -41,6 +41,14 @@ export default function StaffManagement() {
     enabled: !!venueId,
   })
 
+  // Fetch pending invites for the venue
+  const { data: invites = [] } = useQuery<any[]>({
+    queryKey: ['venue-invites', venueId],
+    queryFn: () => adminAPI.getVenueInvites(venueId).then(r => r.data.data ?? []),
+    enabled: !!venueId,
+  })
+  const pendingInvites = invites.filter((i: any) => !i.accepted_at)
+
   const handleVenueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value
     const name = allVenues.find((v: Venue) => v.id === id)?.name || ''
@@ -51,12 +59,13 @@ export default function StaffManagement() {
   const inviteMutation = useMutation({
     mutationFn: () => adminAPI.inviteStaff(venueId, form),
     onSuccess: () => {
-      toast.success(`${form.name} added as ${form.role}`)
+      toast.success(`Invitation sent to ${form.email}!`)
       setInviteOpen(false)
       setForm({ name: '', email: '', role: 'staff' })
       queryClient.invalidateQueries({ queryKey: ['venue-users'] })
+      queryClient.invalidateQueries({ queryKey: ['venue-invites'] })
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to invite — email may already exist'),
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to send invitation'),
   })
 
   const removeMutation = useMutation({
@@ -153,6 +162,39 @@ export default function StaffManagement() {
             )}
           </div>
         )}
+
+        {/* Pending Invitations */}
+        {venueId && pendingInvites.length > 0 && (
+          <div className="card overflow-hidden">
+            <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+              <Clock size={13} className="text-amber-600" />
+              <p className="text-xs font-semibold text-amber-700">
+                {pendingInvites.length} pending invitation{pendingInvites.length !== 1 ? 's' : ''} (not yet accepted)
+              </p>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {pendingInvites.map((inv: any) => (
+                <div key={inv.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Mail size={14} className="text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{inv.name}</p>
+                    <p className="text-xs text-gray-400">{inv.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                      {inv.role}
+                    </span>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                      <Clock size={10} /> awaiting
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Invite Modal */}
@@ -181,13 +223,15 @@ export default function StaffManagement() {
             </div>
           )}
           <Input
-            label="Full Name *"
+            label="Full Name"
+            required
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="Jane Smith"
           />
           <Input
-            label="Email *"
+            label="Email"
+            required
             type="email"
             value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -202,9 +246,14 @@ export default function StaffManagement() {
               { value: 'admin', label: 'Admin' },
             ]}
           />
-          <p className="text-xs text-gray-400">
-            Default password: <code className="bg-gray-100 px-1 rounded font-mono">ChangeMe123!</code> — they should change it on first login.
-          </p>
+          <div className="flex items-start gap-2 bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
+            <Mail size={13} className="mt-0.5 flex-shrink-0" />
+            <p>
+              An invitation email will be sent to <strong>{form.email || 'this address'}</strong>.
+              They must click the link to set their password and activate their account.
+              The link expires after <strong>72 hours</strong>.
+            </p>
+          </div>
         </div>
       </Modal>
 

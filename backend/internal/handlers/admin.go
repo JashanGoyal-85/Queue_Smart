@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	"queuesmart/internal/models"
 	"queuesmart/internal/repository"
 	"queuesmart/internal/services"
+	"queuesmart/pkg/email"
 	"queuesmart/pkg/response"
 )
 
@@ -19,10 +19,25 @@ type AdminHandler struct {
 	auditRepo     repository.AuditRepository
 	analyticsRepo repository.AnalyticsRepository
 	predService   *services.PredictionService
+	inviteRepo    repository.InvitationRepository
+	emailCfg      *email.Config
 }
 
-func NewAdminHandler(qr repository.QueueRepository, vr repository.VenueRepository, ur repository.UserRepository, ar repository.AuditRepository, anr repository.AnalyticsRepository, ps *services.PredictionService) *AdminHandler {
-	return &AdminHandler{queueRepo: qr, venueRepo: vr, userRepo: ur, auditRepo: ar, analyticsRepo: anr, predService: ps}
+func NewAdminHandler(
+	qr repository.QueueRepository,
+	vr repository.VenueRepository,
+	ur repository.UserRepository,
+	ar repository.AuditRepository,
+	anr repository.AnalyticsRepository,
+	ps *services.PredictionService,
+	ir repository.InvitationRepository,
+	ec *email.Config,
+) *AdminHandler {
+	return &AdminHandler{
+		queueRepo: qr, venueRepo: vr, userRepo: ur,
+		auditRepo: ar, analyticsRepo: anr, predService: ps,
+		inviteRepo: ir, emailCfg: ec,
+	}
 }
 
 func (h *AdminHandler) CreateQueue(c *gin.Context) {
@@ -148,32 +163,51 @@ func (h *AdminHandler) GetVenueUsers(c *gin.Context) {
 	response.Success(c, venueUsers)
 }
 
+// InviteStaffUser sends an email invitation to a new staff/admin member.
+// The account is created only after the invitee accepts the link.
 func (h *AdminHandler) InviteStaffUser(c *gin.Context) {
-	venueID, _ := uuid.Parse(c.Param("id"))
+	venueID := c.Param("id")
+	callerID, _ := c.Get("userID")
+
 	var input struct {
-		Name     string `json:"name" binding:"required"`
-		Email    string `json:"email" binding:"required,email"`
-		Role     string `json:"role"`
+		Name  string `json:"name"  binding:"required"`
+		Email string `json:"email" binding:"required,email"`
+		Role  string `json:"role"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.ValidationError(c, err.Error())
 		return
 	}
-	if input.Role == "" { input.Role = models.RoleStaff }
-	hash, _ := bcrypt.GenerateFromPassword([]byte("ChangeMe123!"), bcrypt.DefaultCost)
-	user := &models.User{
-		Name:         input.Name,
-		Email:        input.Email,
-		PasswordHash: string(hash),
-		Role:         input.Role,
-		VenueID:      &venueID,
+	if input.Role == "" {
+		input.Role = "staff"
 	}
-	if err := h.userRepo.Create(user); err != nil {
-		response.Error(c, http.StatusConflict, "User already exists")
+
+	if err := CreateInvite(
+		h.inviteRepo, h.venueRepo, h.emailCfg,
+		input.Email, input.Name, input.Role,
+		venueID, callerID.(string),
+	); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to send invitation: "+err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"success": true, "data": user})
+
+	c.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"message": "Invitation sent to " + input.Email + ". They will receive an email with a link to set up their account.",
+	})
 }
+
+// ListVenueInvites returns all pending invitations for a venue (admin view).
+func (h *AdminHandler) ListVenueInvites(c *gin.Context) {
+	venueID, _ := uuid.Parse(c.Param("id"))
+	invites, err := h.inviteRepo.ListByVenue(venueID)
+	if err != nil {
+		response.InternalError(c)
+		return
+	}
+	response.Success(c, invites)
+}
+
 
 func (h *AdminHandler) RemoveStaff(c *gin.Context) {
 	userID, _ := uuid.Parse(c.Param("userId"))

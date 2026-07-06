@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Ticket, Clock, CheckCircle, TrendingUp, Plus } from 'lucide-react'
+import { Ticket, Clock, CheckCircle, TrendingUp, Plus, MailWarning } from 'lucide-react'
 import { userAPI } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { Layout } from '../../components/layout/Layout'
@@ -43,6 +43,7 @@ export default function Dashboard() {
   return (
     <Layout breadcrumb="Dashboard">
       <div className="max-w-5xl mx-auto space-y-6">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

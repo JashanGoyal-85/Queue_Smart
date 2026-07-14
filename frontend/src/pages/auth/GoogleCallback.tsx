@@ -5,8 +5,6 @@ import { authAPI } from '../../services/api'
 import toast from 'react-hot-toast'
 import { Brand } from '../../components/layout/Brand'
 
-// This page handles the redirect from Google OAuth.
-// URL: /auth/callback?access_token=xxx&refresh_token=xxx&error=yyy
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
@@ -14,6 +12,7 @@ export default function GoogleCallback() {
   const handled = useRef(false)
 
   useEffect(() => {
+    // Prevent React Strict Mode from firing this twice
     if (handled.current) return
     handled.current = true
 
@@ -40,14 +39,15 @@ export default function GoogleCallback() {
       return
     }
 
-    // Fetch the user profile using the access token
+    // Fetch the user profile using the fresh access token
     authAPI.me(accessToken)
       .then(res => {
         const user = res.data.data
         setAuth(user, accessToken, refreshToken)
         toast.success(`Welcome, ${user.name}! 🎉`)
-        // Role-based redirect
-        if (['staff','admin','superadmin'].includes(user.role)) {
+        
+        // Route them dynamically based on role
+        if (['staff', 'admin', 'superadmin'].includes(user.role)) {
           navigate('/staff', { replace: true })
         } else {
           navigate('/dashboard', { replace: true })
@@ -57,13 +57,12 @@ export default function GoogleCallback() {
         toast.error('Failed to load your profile. Please try again.')
         navigate('/login', { replace: true })
       })
-  }, [])
+  }, [navigate, searchParams, setAuth])
 
   return (
     <div className="auth-canvas min-h-screen flex items-center justify-center p-4">
       <div className="text-center animate-fade-in">
         <div className="mb-6"><Brand /></div>
-        {/* Google-coloured spinner */}
         <div className="relative w-14 h-14 mx-auto mb-5">
           <div className="absolute inset-0 rounded-full border-4 border-gray-100" />
           <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#4285F4] border-r-[#34A853] animate-spin" />

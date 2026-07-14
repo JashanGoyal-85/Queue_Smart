@@ -67,4 +67,79 @@ export const authAPI = {
   googleLoginURL: () => `${BASE_URL}/auth/google`,
 }
 
-// ... Keep the rest of your file (userAPI, venueAPI, etc.) exactly the same ...
+// User
+export const userAPI = {
+  getMe: () => api.get('/me'),
+  updateMe: (data: { name?: string; phone?: string; avatar_url?: string }) => api.put('/me', data),
+  changePassword: (data: { old_password: string; new_password: string }) => api.put('/me/password', data),
+  getMyTokens: (page = 1, limit = 20) => api.get(`/me/tokens?page=${page}&limit=${limit}`),
+  getMyStats: () => api.get('/me/stats'),
+  getNotifications: (page = 1) => api.get(`/me/notifications?page=${page}`),
+  markNotificationRead: (id: string) => api.put(`/me/notifications/${id}/read`),
+  markAllNotificationsRead: () => api.put('/me/notifications/read-all'),
+}
+
+// Venues
+export const venueAPI = {
+  list: (params?: { page?: number; limit?: number; city?: string; category?: string; q?: string }) =>
+    api.get('/venues', { params }),
+  get: (slug: string) => api.get(`/venues/${slug}`),
+}
+
+// Queues
+export const queueAPI = {
+  get: (id: string) => api.get(`/queues/${id}`),
+  join: (id: string, data: { guest_name?: string; guest_phone?: string; priority?: boolean }) =>
+    api.post(`/queues/${id}/join`, data),
+  getPosition: (queueId: string, tokenId: string) => api.get(`/queues/${queueId}/position/${tokenId}`),
+  getQR: (id: string) => api.get(`/queues/${id}/qr`, { responseType: 'blob' }),
+  getToken: (id: string) => api.get(`/tokens/${id}`),
+  cancelToken: (id: string) => api.post(`/tokens/${id}/cancel`),
+}
+
+// Staff
+export const staffAPI = {
+  getQueues: () => api.get('/staff/queues'),
+  getQueueTokens: (id: string, status?: 'all' | 'active') => api.get(`/staff/queues/${id}/tokens${status === 'all' ? '?status=all' : ''}`),
+  getCounters: (queueId: string) => api.get(`/staff/queues/${queueId}/counters`),
+  createCounter: (queueId: string, name: string) => api.post(`/staff/queues/${queueId}/counters`, { name }),
+  updateCounter: (id: string, data: { name?: string; is_active?: boolean }) => api.put(`/staff/counters/${id}`, data),
+  callToken: (id: string, counterId?: string) => api.post(`/staff/tokens/${id}/call`, { counter_id: counterId }),
+  callNext: (queueId: string, counterId?: string) => api.post(`/staff/queues/${queueId}/call-next`, { counter_id: counterId }),
+  completeToken: (id: string) => api.post(`/staff/tokens/${id}/complete`),
+  skipToken: (id: string) => api.post(`/staff/tokens/${id}/skip`),
+  togglePriority: (id: string) => api.post(`/staff/tokens/${id}/priority`),
+  updateQueueStatus: (id: string, status: string) => api.put(`/staff/queues/${id}/status`, { status }),
+  getAnalytics: (id: string) => api.get(`/staff/queues/${id}/analytics`),
+  extendTokenTime: (id: string, addSeconds: number) => api.patch(`/staff/tokens/${id}/extend`, { add_seconds: addSeconds }),
+  resetCounter: (queueId: string) => api.post(`/staff/queues/${queueId}/reset-counter`),
+}
+
+// Admin
+export const adminAPI = {
+  createQueue: (data: object) => api.post('/admin/queues', data),
+  updateQueue: (id: string, data: object) => api.put(`/admin/queues/${id}`, data),
+  deleteQueue: (id: string) => api.delete(`/admin/queues/${id}`),
+  getVenueStats: (venueId: string, from?: string, to?: string) =>
+    api.get(`/admin/venues/${venueId}/stats`, { params: { from, to } }),
+  getPeakHours: (venueId: string) => api.get(`/admin/venues/${venueId}/peak-hours`),
+  getVenueUsers: (venueId: string) => api.get(`/admin/venues/${venueId}/users`),
+  getVenueInvites: (venueId: string) => api.get(`/admin/venues/${venueId}/invites`),
+  inviteStaff: (venueId: string, data: { name: string; email: string; role?: string }) =>
+    api.post(`/admin/venues/${venueId}/users`, data),
+  removeStaff: (venueId: string, userId: string) => api.delete(`/admin/venues/${venueId}/users/${userId}`),
+  getAuditLogs: (action?: string) => api.get('/admin/audit-logs', { params: { action } }),
+}
+
+// SuperAdmin
+export const superAdminAPI = {
+  createVenue: (data: object) => api.post('/superadmin/venues', data),
+  listVenues: () => api.get('/superadmin/venues'),
+  updateVenue: (id: string, data: object) => api.put(`/superadmin/venues/${id}`, data),
+  listUsers: (role?: string, q?: string) => api.get('/superadmin/users', { params: { role, q } }),
+  updateUserRole: (id: string, data: { role: string; venue_id?: string }) =>
+    api.put(`/superadmin/users/${id}/role`, data),
+  assignVenue: (userId: string, venueId: string) =>
+    api.put(`/superadmin/users/${userId}/venue`, { venue_id: venueId }),
+  getSystemStats: () => api.get('/superadmin/system-stats'),
+}

@@ -105,6 +105,7 @@ export const staffAPI = {
   updateQueueStatus: (id: string, status: string) => api.put(`/staff/queues/${id}/status`, { status }),
   getAnalytics: (id: string) => api.get(`/staff/queues/${id}/analytics`),
   extendTokenTime: (id: string, addSeconds: number) => api.patch(`/staff/tokens/${id}/extend`, { add_seconds: addSeconds }),
+  resetCounter: (queueId: string) => api.post(`/staff/queues/${queueId}/reset-counter`),
 }
 
 // Admin

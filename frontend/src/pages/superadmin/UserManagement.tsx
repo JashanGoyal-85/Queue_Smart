@@ -40,7 +40,7 @@ export default function UserManagement() {
   const updateRoleMut = useMutation({
     mutationFn: () => superAdminAPI.updateUserRole(selectedUser!.id, { role: newRole }),
     onSuccess: () => {
-      toast.success('Role updated')
+      toast.success(`Role updated to "${newRole}". User will be signed out and must re-login to activate their new role.`, { duration: 5000 })
       setModalMode(null)
       queryClient.invalidateQueries({ queryKey: ['all-users'] })
     },

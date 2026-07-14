@@ -43,16 +43,50 @@ func (s *QueueService) JoinQueue(queueID uuid.UUID, userID *uuid.UUID, guestName
 
 	maxNum, _ := s.tokenRepo.GetMaxTokenNumber(queueID)
 	tokenNum := maxNum + 1
-	letter := string(rune('A' + (tokenNum/1000)%26))
-	displayCode := fmt.Sprintf("%s%03d", letter, tokenNum%1000)
+	// displayNum is 1-based within the current session; resets to 1 after ResetQueueCounter.
+	displayNum := tokenNum - queue.DisplayCodeBase
+	if displayNum <= 0 {
+		displayNum = 1
+	}
+	letter := string(rune('A' + (displayNum/1000)%26))
+	displayCode := fmt.Sprintf("%s%03d", letter, displayNum%1000)
 
 	priority := models.TokenPriorityNormal
 	if isPriority && queue.IsPriorityEnabled {
 		priority = models.TokenPriorityPriority
 	}
 
-	position, _ := s.tokenRepo.GetPosition(queueID, tokenNum, priority)
-	estimatedWait := queue.AvgServeTimeSeconds * position
+	now := time.Now()
+	serveTime := time.Duration(queue.AvgServeTimeSeconds) * time.Second
+
+	// ── Chained-deadline model ────────────────────────────────────────────────
+	// Find the latest EstimatedReadyAt among all currently waiting/called tokens.
+	// The new token's deadline = lastDeadline + configured service time.
+	//
+	// Example: A joined 1 min ago with 3-min service → A's deadline = NOW+2min.
+	//          B joins now → B's deadline = (NOW+2min) + 3min = NOW+5min.
+	//          B's countdown starts at 5 min — exactly "remaining of A + service time".
+	waitingTokens, _ := s.tokenRepo.GetByQueueID(queueID, []string{models.TokenStatusWaiting, models.TokenStatusCalled})
+	var lastDeadline *time.Time
+	for i := range waitingTokens {
+		ra := waitingTokens[i].EstimatedReadyAt
+		if ra != nil && ra.After(now) {
+			if lastDeadline == nil || ra.After(*lastDeadline) {
+				copy := *ra
+				lastDeadline = &copy
+			}
+		}
+	}
+
+	var readyAt time.Time
+	if lastDeadline != nil {
+		// Chain: start after the last person in the queue finishes
+		readyAt = lastDeadline.Add(serveTime)
+	} else {
+		// Queue is empty — this token is next; wait = one service slot
+		readyAt = now.Add(serveTime)
+	}
+	estimatedWait := int(time.Until(readyAt).Seconds())
 
 	token := &models.Token{
 		QueueID:              queueID,
@@ -62,6 +96,7 @@ func (s *QueueService) JoinQueue(queueID uuid.UUID, userID *uuid.UUID, guestName
 		Status:               models.TokenStatusWaiting,
 		Priority:             priority,
 		EstimatedWaitSeconds: estimatedWait,
+		EstimatedReadyAt:     &readyAt,
 		GuestName:            guestName,
 		GuestPhone:           guestPhone,
 		JoinedAt:             time.Now(),
@@ -233,40 +268,99 @@ func (s *QueueService) UpdateQueueStatus(queueID uuid.UUID, status string) (*mod
 	return queue, nil
 }
 
-func (s *QueueService) GetTokenPosition(queueID, tokenID uuid.UUID) (int, int, error) {
+// GetTokenPosition returns the position, estimated wait seconds, and the
+// absolute ready-by deadline for the given token.
+// The deadline (estimated_ready_at) is the authoritative countdown source:
+//   - At join time it equals NOW + position × avg_serve_time
+//   - On extension it is shifted forward by the added seconds
+//   - Downstream tokens are also shifted, so everyone behind sees the impact
+//
+// The returned estimatedWait is max(positionBased, deadlineRemaining).
+func (s *QueueService) GetTokenPosition(queueID, tokenID uuid.UUID) (int, int, *time.Time, error) {
 	token, err := s.tokenRepo.GetByID(tokenID)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	pos, err := s.tokenRepo.GetPosition(queueID, token.TokenNumber, token.Priority)
 	queue, _ := s.queueRepo.GetByID(queueID)
 
-	// Base estimate: how many people ahead × avg serve time per person
+	// Position-based estimate: how many people ahead × avg serve time
 	positionBased := 0
 	if queue != nil {
 		positionBased = queue.AvgServeTimeSeconds * pos
 	}
 
-	// If staff manually extended this token's wait time, honour whichever is larger.
-	// This ensures manual extensions are always visible to the user even if the
-	// queue moves faster than the position-based estimate.
-	estimatedWait := positionBased
-	if token.EstimatedWaitSeconds > estimatedWait {
-		estimatedWait = token.EstimatedWaitSeconds
+	now := time.Now()
+	var readyAt *time.Time
+	var estimatedWait int
+
+	if token.EstimatedReadyAt != nil && token.EstimatedReadyAt.After(now) {
+		// ✅ Stored deadline is still in the future — always trust it.
+		// It was set at join time (chained model) or shifted by an extension.
+		// Using it directly ensures refresh never resets the countdown.
+		readyAt = token.EstimatedReadyAt
+		estimatedWait = int(token.EstimatedReadyAt.Sub(now).Seconds())
+	} else if token.EstimatedReadyAt == nil {
+		// 🔧 Old token (created before deadline tracking was added).
+		// Compute a position-based deadline ONCE and persist it to the DB so that
+		// every subsequent refresh returns the same fixed timestamp.
+		t := now.Add(time.Duration(positionBased) * time.Second)
+		token.EstimatedReadyAt = &t
+		_ = s.tokenRepo.Update(token) // save — future calls read from DB, no more drift
+		readyAt = &t
+		estimatedWait = positionBased
+	} else {
+		// Deadline has already passed — token is about to be called / being served.
+		estimatedWait = 0
+		t := now
+		readyAt = &t
 	}
 
-	return pos, estimatedWait, err
+	return pos, estimatedWait, readyAt, err
 }
 
 
-func (s *QueueService) updateAvgServeTime(queueID uuid.UUID, actualSeconds int) {
+func (s *QueueService) updateAvgServeTime(_ uuid.UUID, _ int) {
+	// AvgServeTimeSeconds is the admin-configured per-person service duration.
+	// We intentionally do NOT auto-update it from actual completion times:
+	// the moving-average update was corrupting the estimate every time a quick
+	// test-token was completed (e.g. 10 s), causing wildly inconsistent countdowns.
+	// Admins control this value explicitly via queue settings.
+}
+
+// ResetQueueCounter cancels all waiting/called tokens and resets the display
+// code sequence so the next token issued starts from A001.
+func (s *QueueService) ResetQueueCounter(queueID uuid.UUID) error {
 	queue, err := s.queueRepo.GetByID(queueID)
-	if err != nil || actualSeconds <= 0 {
-		return
+	if err != nil {
+		return errors.New("queue not found")
 	}
-	newAvg := (queue.AvgServeTimeSeconds*4 + actualSeconds) / 5
-	queue.AvgServeTimeSeconds = newAvg
-	s.queueRepo.Update(queue)
+
+	// Cancel every in-flight token so the queue is clean after the reset.
+	waitingTokens, _ := s.tokenRepo.GetByQueueID(
+		queueID, []string{models.TokenStatusWaiting, models.TokenStatusCalled},
+	)
+	for i := range waitingTokens {
+		waitingTokens[i].Status = models.TokenStatusCancelled
+		_ = s.tokenRepo.Update(&waitingTokens[i])
+	}
+
+	// Advance the base so the very next token gets displayNum = 1 → "A001".
+	maxNum, _ := s.tokenRepo.GetMaxTokenNumber(queueID)
+	queue.DisplayCodeBase = maxNum
+	queue.CurrentCount = 0
+
+	if err := s.queueRepo.Update(queue); err != nil {
+		return err
+	}
+
+	// Notify all connected staff/admin dashboards.
+	s.hub.Broadcast(
+		fmt.Sprintf("queue:%s", queueID.String()),
+		"queue.counter_reset",
+		map[string]interface{}{"queueID": queueID.String()},
+	)
+	return nil
 }
 
 func (s *QueueService) updateAnalytics(queueID, venueID uuid.UUID, eventType string) {

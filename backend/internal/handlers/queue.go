@@ -66,12 +66,16 @@ func (h *QueueHandler) JoinQueue(c *gin.Context) {
 func (h *QueueHandler) GetPosition(c *gin.Context) {
 	queueID, _ := uuid.Parse(c.Param("id"))
 	tokenID, _ := uuid.Parse(c.Param("tokenId"))
-	pos, estimated, err := h.queueService.GetTokenPosition(queueID, tokenID)
+	pos, estimated, readyAt, err := h.queueService.GetTokenPosition(queueID, tokenID)
 	if err != nil {
 		response.NotFound(c, "Token not found")
 		return
 	}
-	response.Success(c, gin.H{"position": pos, "estimated_wait_seconds": estimated})
+	response.Success(c, gin.H{
+		"position":              pos,
+		"estimated_wait_seconds": estimated,
+		"estimated_ready_at":    readyAt, // absolute UTC deadline for stable countdown
+	})
 }
 
 func (h *QueueHandler) GetQueueQR(c *gin.Context) {

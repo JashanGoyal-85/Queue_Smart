@@ -9,10 +9,10 @@ import (
 
 type QueueAnalytics struct {
 	ID               uuid.UUID `json:"id" gorm:"type:char(36);primaryKey"`
-	QueueID          uuid.UUID `json:"queue_id" gorm:"type:char(36);not null;index"`
+	QueueID          uuid.UUID `json:"queue_id" gorm:"type:char(36);not null;uniqueIndex:idx_analytics_queue_date_hour"`
 	VenueID          uuid.UUID `json:"venue_id" gorm:"type:char(36);not null;index"`
-	Date             time.Time `json:"date" gorm:"type:date;not null"`
-	Hour             int       `json:"hour" gorm:"not null"`
+	Date             time.Time `json:"date" gorm:"type:date;not null;uniqueIndex:idx_analytics_queue_date_hour"`
+	Hour             int       `json:"hour" gorm:"not null;uniqueIndex:idx_analytics_queue_date_hour"`
 	TokensIssued     int       `json:"tokens_issued" gorm:"default:0"`
 	TokensCompleted  int       `json:"tokens_completed" gorm:"default:0"`
 	TokensCancelled  int       `json:"tokens_cancelled" gorm:"default:0"`

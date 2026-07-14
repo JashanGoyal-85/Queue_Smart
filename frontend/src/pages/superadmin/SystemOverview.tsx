@@ -1,15 +1,24 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, Users, Activity } from 'lucide-react'
 import { superAdminAPI } from '../../services/api'
 import { Layout } from '../../components/layout/Layout'
 import { StatCardSkeleton } from '../../components/ui/Spinner'
+import { PeakHoursHeatmap } from '../../components/ui/PeakHoursHeatmap'
+import type { Venue } from '../../types'
 
 export default function SystemOverview() {
+  const [selectedVenueId, setSelectedVenueId] = useState('')
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['system-stats'],
     queryFn: () => superAdminAPI.getSystemStats().then(r => r.data.data),
     refetchInterval: 30000,
+  })
+
+  const { data: venues = [] } = useQuery<Venue[]>({
+    queryKey: ['all-venues-overview'],
+    queryFn: () => superAdminAPI.listVenues().then(r => r.data.data),
   })
 
   return (
@@ -21,6 +30,7 @@ export default function SystemOverview() {
           <p className="text-sm text-gray-500 mt-0.5">QueueSmart Platform Admin</p>
         </div>
 
+        {/* Stat cards */}
         <div className="grid md:grid-cols-3 gap-4">
           {isLoading ? [1,2,3].map(i => <StatCardSkeleton key={i} />) : (
             <>
@@ -85,6 +95,28 @@ export default function SystemOverview() {
             </div>
           </div>
         </div>
+
+        {/* Peak Hours — per venue */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">Peak Hours Analysis</h2>
+            <div className="flex items-center gap-2">
+              <Building2 size={15} className="text-gray-400" />
+              <select
+                value={selectedVenueId}
+                onChange={e => setSelectedVenueId(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="">— Select a venue —</option>
+                {venues.map((v: Venue) => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <PeakHoursHeatmap venueId={selectedVenueId} />
+        </div>
+
       </div>
     </Layout>
   )

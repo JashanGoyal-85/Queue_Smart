@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	rdb "github.com/redis/go-redis/v9"
 	"queuesmart/internal/models"
 	"queuesmart/internal/repository"
+	pkgredis "queuesmart/pkg/redis"
 	"queuesmart/pkg/response"
+	ws "queuesmart/internal/websocket"
 )
 
 type SuperAdminHandler struct {
@@ -15,10 +19,12 @@ type SuperAdminHandler struct {
 	userRepo  repository.UserRepository
 	queueRepo repository.QueueRepository
 	tokenRepo repository.TokenRepository
+	redis     *rdb.Client
+	hub       *ws.Hub
 }
 
-func NewSuperAdminHandler(vr repository.VenueRepository, ur repository.UserRepository, qr repository.QueueRepository, tr repository.TokenRepository) *SuperAdminHandler {
-	return &SuperAdminHandler{venueRepo: vr, userRepo: ur, queueRepo: qr, tokenRepo: tr}
+func NewSuperAdminHandler(vr repository.VenueRepository, ur repository.UserRepository, qr repository.QueueRepository, tr repository.TokenRepository, rc *rdb.Client, hub *ws.Hub) *SuperAdminHandler {
+	return &SuperAdminHandler{venueRepo: vr, userRepo: ur, queueRepo: qr, tokenRepo: tr, redis: rc, hub: hub}
 }
 
 func (h *SuperAdminHandler) CreateVenue(c *gin.Context) {
@@ -130,6 +136,12 @@ func (h *SuperAdminHandler) UpdateUserRole(c *gin.Context) {
 		user.VenueID = input.VenueID
 	}
 	h.userRepo.Update(user)
+	// 1. Invalidate refresh token — next token-refresh attempt will fail
+	pkgredis.Delete(context.Background(), h.redis, "refresh:"+userID.String())
+	// 2. Push force_logout via WebSocket — instant logout on user's device
+	h.hub.Broadcast("user:"+userID.String(), "force_logout", map[string]string{
+		"reason": "Your role has been changed by an administrator. Please sign in again.",
+	})
 	response.Success(c, user)
 }
 
@@ -180,7 +192,11 @@ func (h *SuperAdminHandler) AssignVenue(c *gin.Context) {
 		response.InternalError(c)
 		return
 	}
-
+	// Invalidate token + push instant logout via WebSocket
+	pkgredis.Delete(context.Background(), h.redis, "refresh:"+userID.String())
+	h.hub.Broadcast("user:"+userID.String(), "force_logout", map[string]string{
+		"reason": "Your venue assignment has changed. Please sign in again.",
+	})
 	response.Success(c, user)
 }
 

@@ -81,3 +81,14 @@ func (r *tokenRepo) GetMaxTokenNumber(queueID uuid.UUID) (int, error) {
 	err := row.Scan(&max)
 	return max, err
 }
+
+// GetWaitingAfter returns all waiting/called tokens with token_number > afterTokenNumber
+// in the same queue. Sorted ascending so cascade updates happen in order.
+func (r *tokenRepo) GetWaitingAfter(queueID uuid.UUID, afterTokenNumber int) ([]models.Token, error) {
+	var tokens []models.Token
+	err := r.db.Where(
+		"queue_id = ? AND token_number > ? AND status IN ?",
+		queueID, afterTokenNumber, []string{models.TokenStatusWaiting, models.TokenStatusCalled},
+	).Order("token_number ASC").Find(&tokens).Error
+	return tokens, err
+}

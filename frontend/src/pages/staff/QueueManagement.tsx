@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Phone, Star, CheckCircle, SkipForward, ArrowRight,
-  Monitor, Plus, Power, Clock, ChevronUp, ArrowRightCircle
+  Monitor, Plus, Power, Clock, ChevronUp, ArrowRightCircle,
+  RotateCcw, AlertTriangle, X
 } from 'lucide-react'
 import { staffAPI } from '../../services/api'
 import { wsService } from '../../services/websocket'
@@ -29,6 +30,7 @@ export default function QueueManagement() {
   const [selectedCounterId, setSelectedCounterId] = useState('')
   const [newCounterName, setNewCounterName] = useState('')
   const [extendOpenId, setExtendOpenId] = useState<string | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const { data: tokens = [], isLoading } = useQuery({
     queryKey: ['queue-tokens', queueId],
@@ -183,6 +185,16 @@ export default function QueueManagement() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['queue-counters', queueId] }),
     onError: (err: any) => toast.error(err.response?.data?.message ?? 'Could not update counter'),
   })
+  const resetCounterMut = useMutation({
+    mutationFn: () => staffAPI.resetCounter(queueId!),
+    onSuccess: () => {
+      setShowResetConfirm(false)
+      toast.success('🔄 Counter reset! Next token will be A001.')
+      queryClient.invalidateQueries({ queryKey: ['queue-tokens', queueId] })
+      queryClient.invalidateQueries({ queryKey: ['queue-analytics', queueId] })
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message ?? 'Could not reset counter'),
+  })
 
   const waiting = tokens.filter((t: Token) => t.status === 'waiting')
   const called = tokens.filter((t: Token) => ['called', 'serving'].includes(t.status))
@@ -205,7 +217,63 @@ export default function QueueManagement() {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />{analytics.waiting} waiting</span>
             </div>
           )}
+          {/* Reset Counter button */}
+          <button
+            id="reset-counter-btn"
+            onClick={() => setShowResetConfirm(true)}
+            title="Reset token numbering to A001"
+            className="flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-2 rounded-xl transition-colors"
+          >
+            <RotateCcw size={13} />
+            Reset Counter
+          </button>
         </div>
+
+        {/* ── Reset Confirmation Modal ──────────────────────────────────────── */}
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={20} className="text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900">Reset Token Counter?</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    All currently <span className="font-semibold text-amber-600">waiting</span> and{' '}
+                    <span className="font-semibold text-blue-600">called</span> tokens will be
+                    cancelled. The next token issued will start from <span className="font-bold">A001</span>.
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">Past (completed/skipped) tokens are kept for records.</p>
+                </div>
+                <button onClick={() => setShowResetConfirm(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="confirm-reset-counter-btn"
+                  onClick={() => resetCounterMut.mutate()}
+                  disabled={resetCounterMut.isPending}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {resetCounterMut.isPending ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <RotateCcw size={14} />
+                  )}
+                  Yes, Reset to A001
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Counter selector */}
         <div className="card p-4 space-y-4">

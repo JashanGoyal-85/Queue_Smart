@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { Clock, Users, CheckCircle, XCircle, Loader2, Bell, Monitor, AlertCircle } from 'lucide-react'
 import { queueAPI } from '../../services/api'
 import { wsService } from '../../services/websocket'
@@ -10,34 +10,34 @@ import { QRCodeCard } from '../../components/queue/QRCodeCard'
 import { PublicNav } from '../../components/layout/PublicNav'
 import toast from 'react-hot-toast'
 
-// ─── Live countdown hook ──────────────────────────────────────────────────────
-// estimatedSeconds = remaining wait RIGHT NOW (from server: position × avg_serve_time).
-// We snapshot this value each time the server refreshes it, then tick down locally
-// per second between polls. joinedAt is NOT subtracted — that double-counts time.
-function useCountdown(estimatedSeconds: number) {
-  const [remaining, setRemaining] = useState<number>(estimatedSeconds)
+// ─── Deadline-based countdown ─────────────────────────────────────────────────
+// readyAt is an ISO timestamp string from the server ("estimated_ready_at").
+// remaining = max(0, readyAt - NOW) ticked every second.
+//
+//  ✅ Refresh-safe — same deadline → same countdown, NEVER resets to initial value
+//  ✅ Live — WS time_extended updates readyAt in state → countdown jumps instantly
+//  ✅ Cascades — downstream tokens get their own WS event with their shifted readyAt
+function useDeadlineCountdown(readyAt: string | null) {
+  const calcRemaining = (ra: string | null) =>
+    ra ? Math.max(0, Math.floor((new Date(ra).getTime() - Date.now()) / 1000)) : 0
+
+  const [remaining, setRemaining] = useState(() => calcRemaining(readyAt))
   const notifiedRef = useRef(false)
-  // snapshot: {value, takenAt} — reset every time server gives a new estimate
-  const snapRef = useRef({ value: estimatedSeconds, takenAt: Date.now() })
 
-  // Reset snapshot whenever server gives us a fresh estimate
   useEffect(() => {
-    snapRef.current = { value: estimatedSeconds, takenAt: Date.now() }
-    setRemaining(estimatedSeconds)
-  }, [estimatedSeconds])
+    // Immediately apply new deadline
+    setRemaining(calcRemaining(readyAt))
+    notifiedRef.current = false
 
-  // Tick down locally between server refreshes
-  useEffect(() => {
+    if (!readyAt) return
+
     const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - snapRef.current.takenAt) / 1000)
-      const left = Math.max(0, snapRef.current.value - elapsed)
+      const left = calcRemaining(readyAt)
       setRemaining(left)
 
-      // 30-second alert — fire once
+      // 30-second alert — fire once per session
       if (left <= 30 && left > 0 && !notifiedRef.current) {
         notifiedRef.current = true
-
-        // In-app toast
         toast.custom(
           (t) => (
             <div className={`flex items-center gap-3 bg-amber-500 text-white px-4 py-3 rounded-xl shadow-lg ${t.visible ? 'animate-fade-in' : ''}`}>
@@ -50,8 +50,6 @@ function useCountdown(estimatedSeconds: number) {
           ),
           { duration: 10000, position: 'top-center' }
         )
-
-        // Browser push notification (if permission granted)
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('QueueSmart — Get Ready! 🔔', {
             body: 'Your turn is almost here — less than 30 seconds!',
@@ -60,18 +58,14 @@ function useCountdown(estimatedSeconds: number) {
         }
       }
     }, 1000)
-    return () => clearInterval(timer)
-  }, [])   // runs once — snapshot ref keeps it current
 
-  // Reset notification flag when estimate jumps up (staff extended time)
-  useEffect(() => {
-    if (estimatedSeconds > 30) notifiedRef.current = false
-  }, [estimatedSeconds])
+    return () => clearInterval(timer)
+  }, [readyAt]) // re-runs every time deadline changes (e.g. after WS extension event)
 
   return remaining
 }
 
-// ─── Format countdown nicely ─────────────────────────────────────────────────
+// ─── Format countdown ─────────────────────────────────────────────────────────
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return 'Any moment now'
   if (seconds < 60) return `${seconds}s`
@@ -79,8 +73,19 @@ function formatCountdown(seconds: number): string {
   const s = seconds % 60
   if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`
   const h = Math.floor(m / 60)
-  const rm = m % 60
-  return `${h}h ${rm}m`
+  return `${h}h ${m % 60}m`
+}
+
+// ─── Parse estimated_ready_at from any server shape ───────────────────────────
+// The server may return a Time object (with "Time"/"Valid" keys from sql.NullTime)
+// or a plain ISO string or a plain *time.Time JSON serialization.
+function parseReadyAt(val: any): string | null {
+  if (!val) return null
+  if (typeof val === 'string') return val
+  // sql.NullTime shape: { Time: "...", Valid: true }
+  if (val.Valid === false) return null
+  if (val.Time) return val.Time
+  return null
 }
 
 // ─── Request browser notification permission ──────────────────────────────────
@@ -88,68 +93,85 @@ function useBrowserNotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied'
   )
-
   const request = async () => {
     if (!('Notification' in window)) return
-    const result = await Notification.requestPermission()
-    setPermission(result)
+    setPermission(await Notification.requestPermission())
   }
-
   return { permission, request }
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function TrackToken() {
   const { tokenId } = useParams<{ tokenId: string }>()
-  const queryClient = useQueryClient()
   const [isCalled, setIsCalled] = useState(false)
+
+  // Deadline timestamp — single source of truth for the countdown.
+  // Populated from the API on mount/poll, and updated live via WS.
+  const [readyAt, setReadyAt] = useState<string | null>(null)
+
   const { permission, request: requestNotifPermission } = useBrowserNotificationPermission()
 
+  // ── Fetch token details ──────────────────────────────────────────────────
   const { data: token, isLoading, refetch } = useQuery({
     queryKey: ['token', tokenId],
     queryFn: () => queueAPI.getToken(tokenId!).then(r => r.data.data),
-    refetchInterval: 8000,   // poll every 8s as fallback
+    refetchInterval: 20000,
   })
 
+  // ── Fetch position + deadline (only while waiting/called) ────────────────
   const { data: posData } = useQuery({
     queryKey: ['position', token?.queue_id, tokenId],
-    queryFn: () => token ? queueAPI.getPosition(token.queue_id, tokenId!).then(r => r.data.data) : null,
-    enabled: !!token && ['waiting', 'called'].includes(token?.status),
-    refetchInterval: 10000,
+    queryFn: () => token
+      ? queueAPI.getPosition(token.queue_id, tokenId!).then(r => r.data.data)
+      : null,
+    enabled: !!token && ['waiting', 'called'].includes(token?.status ?? ''),
+    refetchInterval: 15000,
   })
 
+  // Sync deadline from API polls into state
+  useEffect(() => {
+    const ra = parseReadyAt(posData?.estimated_ready_at)
+      ?? parseReadyAt(token?.estimated_ready_at)
+    if (ra) setReadyAt(ra)
+  }, [posData?.estimated_ready_at, token?.estimated_ready_at])
+
+  // ── Cancel ───────────────────────────────────────────────────────────────
   const cancelMutation = useMutation({
     mutationFn: () => queueAPI.cancelToken(tokenId!).then(r => r.data.data),
     onSuccess: () => { toast.success('Token cancelled'); refetch() },
     onError: () => toast.error('Could not cancel token'),
   })
 
-  // WebSocket for real-time updates
+  // ── WebSocket real-time updates ──────────────────────────────────────────
   useEffect(() => {
     if (!tokenId) return
     wsService.connect(tokenId, 'token')
 
-    // Token called — show full screen alert
     wsService.on(tokenId, 'your_turn', () => {
       setIsCalled(true)
       toast.success('🎉 It\'s your turn!', { duration: 10000 })
       refetch()
     })
 
-    // Token cancelled
     wsService.on(tokenId, 'token.cancelled', () => refetch())
 
-    // Staff extended wait time — refetch immediately so countdown resets
+    // Staff extended time — update deadline INSTANTLY, no refresh needed.
+    // Works for both the directly extended token AND cascaded downstream tokens
+    // (each gets its own time_extended WS event with its individual readyAt).
     wsService.on(tokenId, 'time_extended', (data: any) => {
+      const newReadyAt = parseReadyAt(data?.estimated_ready_at)
+      if (newReadyAt) {
+        setReadyAt(newReadyAt)  // ← countdown updates immediately
+      }
+
       const added = data?.added_seconds ?? 0
       const mins = Math.round(added / 60)
       toast(
         mins >= 1
-          ? `⏱ Wait time extended by ${mins} min${mins !== 1 ? 's' : ''}`
-          : `⏱ Wait time extended by ${added}s`,
+          ? `⏱ Wait extended by ${mins} min${mins !== 1 ? 's' : ''}`
+          : `⏱ Wait extended by ${added}s`,
         { icon: '⏱', duration: 5000 }
       )
-      refetch()   // pulls new estimated_wait_seconds from server → countdown resets
     })
 
     return () => wsService.disconnect(tokenId)
@@ -159,9 +181,8 @@ export default function TrackToken() {
     if (token?.status === 'called') setIsCalled(true)
   }, [token?.status])
 
-  // Live countdown — server gives remaining wait; we tick down locally between polls
-  const estimatedSecs = posData?.estimated_wait_seconds ?? token?.estimated_wait_seconds ?? 0
-  const remaining = useCountdown(estimatedSecs)
+  // ── Live countdown (deadline-based) ─────────────────────────────────────
+  const remaining = useDeadlineCountdown(readyAt)
 
   // ── Loading / not found ──────────────────────────────────────────────────
   if (isLoading) return (
@@ -255,7 +276,8 @@ export default function TrackToken() {
                 <p className={`text-3xl font-bold tabular-nums transition-colors ${
                   isNearlyDue ? 'text-amber-500 animate-pulse' : 'text-gray-900'
                 }`}>
-                  {estimatedSecs > 0 ? formatCountdown(remaining) : '...'}
+                  {/* Show countdown if we have a deadline, else show '...' while loading */}
+                  {readyAt ? formatCountdown(remaining) : '...'}
                 </p>
                 {isNearlyDue && (
                   <p className="text-xs font-semibold text-amber-500 mt-0.5">Get ready! 🔔</p>

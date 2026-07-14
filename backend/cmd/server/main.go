@@ -76,6 +76,13 @@ func main() {
 		log.Fatalf("Migration failed: %v", err)
 	}
 	log.Println("Database migrated successfully")
+	// Ensure unique index exists for analytics upsert (safe to run on existing tables)
+	db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_queue_date_hour ON queue_analytics (queue_id, date, hour)")
+	// One-time corrective fix: avg_serve_time_seconds may have been corrupted by the
+	// old moving-average logic when quick test tokens were completed in a few seconds.
+	// Reset any queue whose value has drifted below 60 s back to the default 180 s.
+	// The auto-update is now a no-op, so this value will never drift again.
+	db.Exec("UPDATE queues SET avg_serve_time_seconds = 180 WHERE avg_serve_time_seconds < 60")
 
 	// Connect Redis
 	redisClient := pkgredis.NewRedisClient(cfg.RedisURL)
@@ -112,7 +119,7 @@ func main() {
 	queueH := handlers.NewQueueHandler(queueSvc, tokenRepo, cfg)
 	staffH := handlers.NewStaffHandler(queueSvc, queueRepo, counterRepo, tokenRepo, auditRepo, analyticsRepo, userRepo, hub)
 	adminH := handlers.NewAdminHandler(queueRepo, venueRepo, userRepo, auditRepo, analyticsRepo, predSvc, inviteRepo, emailCfg)
-	superAdminH := handlers.NewSuperAdminHandler(venueRepo, userRepo, queueRepo, tokenRepo)
+	superAdminH := handlers.NewSuperAdminHandler(venueRepo, userRepo, queueRepo, tokenRepo, redisClient, hub)
 	inviteH := handlers.NewInviteHandler(inviteRepo, userRepo, venueRepo)
 	wsH := handlers.NewWSHandler(hub)
 
@@ -124,7 +131,7 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.Logger())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.FrontendURL, "http://localhost:3000", "http://localhost:5173"},
+		AllowOrigins:     []string{"https://queue-smart-xi.vercel.app", "http://localhost:3000", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -137,6 +144,7 @@ func main() {
 	// WebSocket routes
 	r.GET("/ws/queue/:id", wsH.QueueWS)
 	r.GET("/ws/token/:id", wsH.TokenWS)
+	r.GET("/ws/user/:id", wsH.UserWS)
 
 	api := r.Group("/api/v1")
 
@@ -197,6 +205,7 @@ func main() {
 		staff.POST("/tokens/:id/skip", staffH.SkipToken)
 		staff.POST("/tokens/:id/priority", staffH.TogglePriority)
 		staff.PATCH("/tokens/:id/extend", staffH.ExtendTokenTime)
+		staff.POST("/queues/:id/reset-counter", staffH.ResetQueueCounter)
 	}
 
 	// Admin routes

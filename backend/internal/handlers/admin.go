@@ -156,7 +156,9 @@ func (h *AdminHandler) GetVenueUsers(c *gin.Context) {
 	users, _, _ := h.userRepo.List(1, 100, "", "")
 	var venueUsers []models.User
 	for _, u := range users {
-		if u.VenueID != nil && *u.VenueID == venueID {
+		// Only include active staff/admin — exclude users whose role was changed away
+		if u.VenueID != nil && *u.VenueID == venueID &&
+			(u.Role == models.RoleStaff || u.Role == models.RoleAdmin) {
 			venueUsers = append(venueUsers, u)
 		}
 	}

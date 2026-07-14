@@ -14,8 +14,12 @@ func NewAnalyticsRepository(db *gorm.DB) *analyticsRepo { return &analyticsRepo{
 
 func (r *analyticsRepo) Upsert(a *models.QueueAnalytics) error {
 	return r.db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "queue_id"}, {Name: "date"}, {Name: "hour"}},
-		DoUpdates: clause.AssignmentColumns([]string{"tokens_issued", "tokens_completed", "tokens_cancelled", "avg_wait_seconds", "peak_concurrent"}),
+		Columns: []clause.Column{{Name: "queue_id"}, {Name: "date"}, {Name: "hour"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"tokens_issued":    gorm.Expr("queue_analytics.tokens_issued + ?", a.TokensIssued),
+			"tokens_completed": gorm.Expr("queue_analytics.tokens_completed + ?", a.TokensCompleted),
+			"tokens_cancelled": gorm.Expr("queue_analytics.tokens_cancelled + ?", a.TokensCancelled),
+		}),
 	}).Create(a).Error
 }
 

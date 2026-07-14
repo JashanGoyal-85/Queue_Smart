@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -303,6 +304,13 @@ func (h *StaffHandler) GetQueueAnalytics(c *gin.Context) {
 
 // ExtendTokenTime lets staff add extra seconds to a token's estimated wait time.
 // Body: { "add_seconds": N }  (1–3600)
+//
+// Two key behaviours:
+//  1. Deadline-based: stores EstimatedReadyAt = NOW + remaining + added so the
+//     countdown is accurate after page refreshes (no more "reset to initial").
+//  2. Cascade: every waiting/called token BEHIND the extended one in the same
+//     queue also has its deadline shifted forward by the same amount, so the
+//     downstream queue members see their wait increase realistically.
 func (h *StaffHandler) ExtendTokenTime(c *gin.Context) {
 	tokenID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -329,22 +337,77 @@ func (h *StaffHandler) ExtendTokenTime(c *gin.Context) {
 		return
 	}
 
-	token.EstimatedWaitSeconds += input.AddSeconds
+	// ── Compute how much time is currently left ───────────────────────────────
+	// Use the stored deadline if available (most accurate), otherwise fall back
+	// to position × avg_serve_time.
+	now := time.Now()
+	queue, _ := h.queueRepo.GetByID(token.QueueID)
+	pos, _ := h.tokenRepo.GetPosition(token.QueueID, token.TokenNumber, token.Priority)
+
+	var currentRemaining int
+	if token.EstimatedReadyAt != nil && token.EstimatedReadyAt.After(now) {
+		currentRemaining = int(token.EstimatedReadyAt.Sub(now).Seconds())
+	} else if queue != nil && pos > 0 {
+		currentRemaining = queue.AvgServeTimeSeconds * pos
+	}
+
+	// New deadline = NOW + remaining + added
+	newReadyAt := now.Add(time.Duration(currentRemaining+input.AddSeconds) * time.Second)
+	token.EstimatedWaitSeconds = currentRemaining + input.AddSeconds
+	token.EstimatedReadyAt = &newReadyAt
+
 	if err := h.tokenRepo.Update(token); err != nil {
 		response.InternalError(c)
 		return
 	}
 
-	// Broadcast real-time update to the user's TrackToken page
+	// ── Broadcast real-time update to the extended token's TrackToken page ───
 	h.hub.Broadcast(
 		"token:"+tokenID.String(),
 		"time_extended",
 		map[string]interface{}{
 			"token_id":               tokenID.String(),
 			"estimated_wait_seconds": token.EstimatedWaitSeconds,
+			"estimated_ready_at":     token.EstimatedReadyAt,
 			"added_seconds":          input.AddSeconds,
 		},
 	)
+
+	// ── Cascade: shift all downstream tokens' deadlines by the same amount ───
+	// "Downstream" = waiting/called tokens with a higher token number in the
+	// same queue (they are behind the extended person in the physical queue).
+	downstream, _ := h.tokenRepo.GetWaitingAfter(token.QueueID, token.TokenNumber)
+	for i := range downstream {
+		dt := &downstream[i]
+		var newDt time.Time
+		if dt.EstimatedReadyAt != nil && dt.EstimatedReadyAt.After(now) {
+			newDt = dt.EstimatedReadyAt.Add(time.Duration(input.AddSeconds) * time.Second)
+		} else if queue != nil {
+			// Fallback: recompute from position and add extension on top
+			dtPos, _ := h.tokenRepo.GetPosition(dt.QueueID, dt.TokenNumber, dt.Priority)
+			dtRemaining := queue.AvgServeTimeSeconds * dtPos
+			newDt = now.Add(time.Duration(dtRemaining+input.AddSeconds) * time.Second)
+		} else {
+			newDt = now.Add(time.Duration(input.AddSeconds) * time.Second)
+		}
+		dt.EstimatedReadyAt = &newDt
+		dt.EstimatedWaitSeconds = int(time.Until(newDt).Seconds())
+		h.tokenRepo.Update(dt)
+
+		// Notify each downstream token's TrackToken page in real time
+		h.hub.Broadcast(
+			"token:"+dt.ID.String(),
+			"time_extended",
+			map[string]interface{}{
+				"token_id":               dt.ID.String(),
+				"estimated_wait_seconds": dt.EstimatedWaitSeconds,
+				"estimated_ready_at":     dt.EstimatedReadyAt,
+				"added_seconds":          input.AddSeconds,
+				"cascaded":               true,
+			},
+		)
+	}
+
 	// Also notify the queue room so staff dashboards refresh
 	h.hub.Broadcast("queue:"+token.QueueID.String(), "token.updated", token)
 
@@ -352,3 +415,18 @@ func (h *StaffHandler) ExtendTokenTime(c *gin.Context) {
 	response.Success(c, token)
 }
 
+// ResetQueueCounter cancels all in-flight tokens and resets the display-code
+// sequence to A001 for the next token issued in this queue.
+func (h *StaffHandler) ResetQueueCounter(c *gin.Context) {
+	queueID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid queue ID")
+		return
+	}
+	if err := h.queueService.ResetQueueCounter(queueID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.audit(c, "reset_queue_counter", "queue", queueID.String())
+	response.Success(c, map[string]string{"message": "Queue counter reset. Next token will be A001."})
+}

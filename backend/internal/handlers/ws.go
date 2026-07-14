@@ -26,3 +26,10 @@ func (h *WSHandler) TokenWS(c *gin.Context) {
 	room := fmt.Sprintf("token:%s", id)
 	websocket.ServeWS(h.hub, c, room)
 }
+
+// UserWS connects a user to their personal push channel (force_logout, role_change, etc.)
+func (h *WSHandler) UserWS(c *gin.Context) {
+	id := c.Param("id")
+	room := fmt.Sprintf("user:%s", id)
+	websocket.ServeWS(h.hub, c, room)
+}

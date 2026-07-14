@@ -55,6 +55,9 @@ type TokenRepository interface {
 	GetPosition(queueID uuid.UUID, tokenNumber int, priority string) (int, error)
 	CountByStatus(queueID uuid.UUID, status string) (int64, error)
 	GetMaxTokenNumber(queueID uuid.UUID) (int, error)
+	// GetWaitingAfter returns all waiting/called tokens in queueID whose
+	// token_number > afterTokenNumber. Used to cascade extension delays downstream.
+	GetWaitingAfter(queueID uuid.UUID, afterTokenNumber int) ([]models.Token, error)
 }
 
 type AnalyticsRepository interface {

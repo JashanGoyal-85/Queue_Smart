@@ -75,7 +75,7 @@ func (h *Hub) Run() {
 
 func (h *Hub) subscribeRedis() {
 	ctx := context.Background()
-	pubsub := h.redis.PSubscribe(ctx, "queue:*", "token:*")
+	pubsub := h.redis.PSubscribe(ctx, "queue:*", "token:*", "user:*")
 	defer pubsub.Close()
 	ch := pubsub.Channel()
 	for msg := range ch {

@@ -4,7 +4,7 @@ class WebSocketService {
   private connections: Map<string, WebSocket> = new Map()
   private handlers: Map<string, Map<string, WSEventHandler[]>> = new Map()
 
-  connect(room: string, type: 'queue' | 'token'): WebSocket {
+  connect(room: string, type: 'queue' | 'token' | 'user'): WebSocket {
     const existing = this.connections.get(room)
     if (existing && existing.readyState === WebSocket.OPEN) return existing
 

@@ -26,16 +26,68 @@ func (s *PredictionService) GetPeakHours(venueID uuid.UUID) (map[string]interfac
 	if err != nil {
 		return nil, err
 	}
-	heatmap := make(map[string]map[int]int)
-	days := []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
-	for _, d := range days {
-		heatmap[d] = make(map[int]int)
+
+	// Build [7][24] heatmap where:
+	//   rows 0-6 = Mon, Tue, Wed, Thu, Fri, Sat, Sun (matching frontend DAYS array)
+	//   cols 0-23 = hour of day
+	// Go's time.Weekday(): Sun=0, Mon=1 … Sat=6
+	// Conversion to frontend index: (goWeekday + 6) % 7
+	heatmap := make([][]int, 7)
+	for i := range heatmap {
+		heatmap[i] = make([]int, 24)
 	}
 	for _, a := range analytics {
-		day := days[a.Date.Weekday()]
-		heatmap[day][a.Hour] += a.TokensIssued
+		goDay := int(a.Date.Weekday()) // 0=Sun … 6=Sat
+		dayIdx := (goDay + 6) % 7    // 0=Mon … 6=Sun
+		h := a.Hour
+		if h >= 0 && h < 24 {
+			heatmap[dayIdx][h] += a.TokensIssued
+		}
 	}
-	return map[string]interface{}{"heatmap": heatmap, "days": days}, nil
+
+	// Compute summary stats
+	frontendDays := []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
+	busiestDayIdx := 0
+	busiestDayTotal := 0
+	for d := 0; d < 7; d++ {
+		total := 0
+		for h := 0; h < 24; h++ {
+			total += heatmap[d][h]
+		}
+		if total > busiestDayTotal {
+			busiestDayTotal = total
+			busiestDayIdx = d
+		}
+	}
+
+	busiestHour := 0
+	busiestHourTotal := 0
+	peakVolume := 0
+	for h := 0; h < 24; h++ {
+		hourTotal := 0
+		for d := 0; d < 7; d++ {
+			v := heatmap[d][h]
+			hourTotal += v
+			if v > peakVolume {
+				peakVolume = v
+			}
+		}
+		if hourTotal > busiestHourTotal {
+			busiestHourTotal = hourTotal
+			busiestHour = h
+		}
+	}
+
+	summary := map[string]interface{}{
+		"busiest_day":  frontendDays[busiestDayIdx],
+		"busiest_hour": busiestHour,
+		"peak_volume":  peakVolume,
+	}
+
+	return map[string]interface{}{
+		"heatmap": heatmap,
+		"summary": summary,
+	}, nil
 }
 
 type SlotRecommendation struct {

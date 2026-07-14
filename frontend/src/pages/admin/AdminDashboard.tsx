@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Settings, Trash2, PlayCircle, PauseCircle,
-  BarChart3, Users, ClipboardPlus, ScrollText, QrCode, X, Building2
+  BarChart3, Users, ClipboardPlus, ScrollText, QrCode, X, Building2,
+  RotateCcw, AlertTriangle
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useVenueStore } from '../../stores/venueStore'
@@ -14,6 +15,7 @@ import { Badge, statusToBadgeColor } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/Modal'
 import { CardSkeleton } from '../../components/ui/Spinner'
+import { PeakHoursHeatmap } from '../../components/ui/PeakHoursHeatmap'
 import toast from 'react-hot-toast'
 import type { Queue, Venue } from '../../types'
 
@@ -27,6 +29,7 @@ export default function AdminDashboard() {
   const [qrQueue, setQrQueue] = useState<Queue | null>(null)
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(false)
+  const [resetQueueId, setResetQueueId] = useState<string | null>(null)
 
   // For regular admins their venueId comes from their profile; for superadmin from the store.
   const venueId = isSuperAdmin ? selectedVenueId : (user?.venue_id || '')
@@ -70,6 +73,16 @@ export default function AdminDashboard() {
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       staffAPI.updateQueueStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-queues'] }),
+  })
+
+  const resetCounterMutation = useMutation({
+    mutationFn: (id: string) => staffAPI.resetCounter(id),
+    onSuccess: () => {
+      setResetQueueId(null)
+      toast.success('🔄 Counter reset! Next token will be A001.')
+      queryClient.invalidateQueries({ queryKey: ['admin-queues'] })
+    },
+    onError: () => toast.error('Could not reset counter'),
   })
 
   const handleShowQR = async (q: Queue) => {
@@ -192,6 +205,11 @@ export default function AdminDashboard() {
                     <Link to={`/admin/queues/${q.id}/settings`}>
                       <Button size="sm" variant="ghost" icon={<Settings size={13} />}>Edit</Button>
                     </Link>
+                    <Button size="sm" variant="ghost" icon={<RotateCcw size={13} />}
+                      onClick={() => setResetQueueId(q.id)}
+                      className="text-red-600 hover:bg-red-50 border border-red-200">
+                      Reset
+                    </Button>
                     <Button size="sm" variant="danger" icon={<Trash2 size={13} />}
                       onClick={() => setDeleteId(q.id)}>Delete</Button>
                   </div>
@@ -200,6 +218,14 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* Peak Hours Heatmap */}
+        {venueId && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Peak Hours Analysis</h2>
+            <PeakHoursHeatmap venueId={venueId} />
+          </div>
+        )}
       </div>
 
       {/* Delete confirm */}
@@ -213,6 +239,52 @@ export default function AdminDashboard() {
         danger
         loading={deleteMutation.isPending}
       />
+
+      {/* Reset Counter Confirmation Modal */}
+      {resetQueueId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900">Reset Token Counter?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  All currently <span className="font-semibold text-amber-600">waiting</span> and{' '}
+                  <span className="font-semibold text-blue-600">called</span> tokens will be
+                  cancelled. The next token issued will start from <span className="font-bold">A001</span>.
+                </p>
+                <p className="text-xs text-gray-400 mt-2">Completed/skipped tokens are kept in history.</p>
+              </div>
+              <button onClick={() => setResetQueueId(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setResetQueueId(null)}
+                className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                id="admin-confirm-reset-counter-btn"
+                onClick={() => resetQueueId && resetCounterMutation.mutate(resetQueueId)}
+                disabled={resetCounterMutation.isPending}
+                className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {resetCounterMutation.isPending ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <RotateCcw size={14} />
+                )}
+                Yes, Reset to A001
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Modal */}
       {qrQueue && (

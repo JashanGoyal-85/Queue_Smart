@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -130,8 +132,29 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.Logger())
+	// Build CORS allowed origins dynamically from environment
+	// This means you can change the Vercel URL just by updating the env var — no code changes needed
+	corsOrigins := []string{
+		"http://localhost:3000",
+		"http://localhost:5173",
+	}
+	// Add the frontend URL from environment (set to your Vercel URL on Render)
+	if frontendURL := cfg.FrontendURL; frontendURL != "" {
+		corsOrigins = append(corsOrigins, frontendURL)
+	}
+	// Also support a comma-separated list of extra origins (for multiple Vercel preview URLs)
+	if extra := os.Getenv("CORS_EXTRA_ORIGINS"); extra != "" {
+		for _, o := range strings.Split(extra, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				corsOrigins = append(corsOrigins, o)
+			}
+		}
+	}
+	log.Printf("CORS allowed origins: %v", corsOrigins)
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://queue-smart-xi.vercel.app", "http://localhost:3000", "http://localhost:5173"},
+		AllowOrigins:     corsOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -140,6 +163,27 @@ func main() {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+
+	// ── TEMPORARY: one-time superadmin setup endpoint ──────────────────────────
+	// Hit: GET /setup-superadmin?secret=qs-setup-2026&email=goyaljashan85@gmail.com
+	// REMOVE THIS AFTER USE
+	r.GET("/setup-superadmin", func(c *gin.Context) {
+		if c.Query("secret") != "qs-setup-2026" {
+			c.JSON(403, gin.H{"error": "forbidden"})
+			return
+		}
+		email := c.Query("email")
+		if email == "" {
+			c.JSON(400, gin.H{"error": "email required"})
+			return
+		}
+		if err := db.Exec("UPDATE users SET role = 'superadmin' WHERE email = ?", email).Error; err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"success": true, "message": "Role updated to superadmin for " + email})
+	})
+	// ── END TEMPORARY ──────────────────────────────────────────────────────────
 
 	// WebSocket routes
 	r.GET("/ws/queue/:id", wsH.QueueWS)

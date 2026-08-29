@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
 
-// 1. Define the exact Render backend URL here
-// (This guarantees it never tries to call Vercel)
-const BASE_URL = 'https://queue-smart-is27.onrender.com/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api/v1`
+  : 'https://queue-smart-ssw9.onrender.com/api/v1';
 
 const api = axios.create({
   baseURL: BASE_URL,

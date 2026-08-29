@@ -8,9 +8,11 @@ class WebSocketService {
     const existing = this.connections.get(room)
     if (existing && existing.readyState === WebSocket.OPEN) return existing
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.host
-    const url = `${protocol}//${host}/ws/${type}/${room}`
+    const backendHost = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace('https://', '').replace('http://', '')
+      : 'queue-smart-ssw9.onrender.com'
+    const protocol = 'wss:'
+    const url = `${protocol}//${backendHost}/ws/${type}/${room}`
     const ws = new WebSocket(url)
 
     ws.onmessage = (event) => {
